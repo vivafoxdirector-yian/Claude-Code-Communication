@@ -2,7 +2,7 @@
 
 A demo system for agent-to-agent communication in a tmux environment.
 
-**📖 Read this in other languages:** [日本語](README.md)
+**📖 Read this in other languages:** [한국어](README.md)
 
 ## 🎯 Demo Overview
 

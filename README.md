@@ -1,165 +1,165 @@
 # 🤖 Tmux Multi-Agent Communication Demo
 
-Agent同士がやり取りするtmux環境のデモシステム
+Agent 간 통신을 위한 tmux 환경 데모 시스템
 
 **📖 Read this in other languages:** [English](README-en.md)
 
-## 🎯 デモ概要
+## 🎯 데모 개요
 
-PRESIDENT → BOSS → Workers の階層型指示システムを体感できます
+PRESIDENT → BOSS → Workers 의 계층형 지시 시스템을 체험할 수 있습니다
 
-### 👥 エージェント構成
+### 👥 에이전트 구성
 
 ```
-📊 PRESIDENT セッション (1ペイン)
-└── PRESIDENT: プロジェクト統括責任者
+📊 PRESIDENT 세션 (1페인)
+└── PRESIDENT: 프로젝트 총괄 책임자
 
-📊 multiagent セッション (4ペイン)  
-├── boss1: チームリーダー
-├── worker1: 実行担当者A
-├── worker2: 実行担当者B
-└── worker3: 実行担当者C
+📊 multiagent 세션 (4페인)
+├── boss1: 팀 리더
+├── worker1: 실행 담당자A
+├── worker2: 실행 담당자B
+└── worker3: 실행 담당자C
 ```
 
-## 🚀 クイックスタート
+## 🚀 퀵 스타트
 
-### 0. リポジトリのクローン
+### 0. 리포지토리 클론
 
 ```bash
 git clone https://github.com/nishimoto265/Claude-Code-Communication.git
 cd Claude-Code-Communication
 ```
 
-### 1. tmux環境構築
+### 1. tmux 환경 구축
 
-⚠️ **注意**: 既存の `multiagent` と `president` セッションがある場合は自動的に削除されます。
+⚠️ **주의**: 기존의 `multiagent` 와 `president` 세션이 있는 경우 자동으로 삭제됩니다.
 
 ```bash
 ./setup.sh
 ```
 
-### 2. セッションアタッチ
+### 2. 세션 어태치
 
 ```bash
-# マルチエージェント確認
+# 멀티에이전트 확인
 tmux attach-session -t multiagent
 
-# プレジデント確認（別ターミナルで）
+# 프레지던트 확인 (별도 터미널에서)
 tmux attach-session -t president
 ```
 
-### 3. Claude Code起動
+### 3. Claude Code 기동
 
-**手順1: President認証**
+**순서1: President 인증**
 ```bash
-# まずPRESIDENTで認証を実施
+# 먼저 PRESIDENT에서 인증을 실시
 tmux send-keys -t president 'claude' C-m
 ```
-認証プロンプトに従って許可を与えてください。
+인증 프롬프트에 따라 허가를 부여해 주세요.
 
-**手順2: Multiagent一括起動**
+**순서2: Multiagent 일괄 기동**
 ```bash
-# 認証完了後、multiagentセッションを一括起動
+# 인증 완료 후, multiagent 세션을 일괄 기동
 for i in {0..3}; do tmux send-keys -t multiagent:0.$i 'claude' C-m; done
 ```
 
-### 4. デモ実行
+### 4. 데모 실행
 
-PRESIDENTセッションで直接入力：
+PRESIDENT 세션에서 직접 입력:
 ```
-あなたはpresidentです。指示書に従って
+당신은 president입니다. 지시서에 따라주세요
 ```
 
-## 📜 指示書について
+## 📜 지시서에 대하여
 
-各エージェントの役割別指示書：
+각 에이전트의 역할별 지시서:
 - **PRESIDENT**: `instructions/president.md`
-- **boss1**: `instructions/boss.md` 
+- **boss1**: `instructions/boss.md`
 - **worker1,2,3**: `instructions/worker.md`
 
-**Claude Code参照**: `CLAUDE.md` でシステム構造を確認
+**Claude Code 참조**: `CLAUDE.md` 에서 시스템 구조를 확인
 
-**要点:**
-- **PRESIDENT**: 「あなたはpresidentです。指示書に従って」→ boss1に指示送信
-- **boss1**: PRESIDENT指示受信 → workers全員に指示 → 完了報告
-- **workers**: Hello World実行 → 完了ファイル作成 → 最後の人が報告
+**요점:**
+- **PRESIDENT**: "당신은 president입니다. 지시서에 따라주세요" → boss1에 지시 전송
+- **boss1**: PRESIDENT 지시 수신 → workers 전원에게 지시 → 완료 보고
+- **workers**: Hello World 실행 → 완료 파일 작성 → 마지막 사람이 보고
 
-## 🎬 期待される動作フロー
+## 🎬 기대되는 동작 흐름
 
 ```
-1. PRESIDENT → boss1: "あなたはboss1です。Hello World プロジェクト開始指示"
-2. boss1 → workers: "あなたはworker[1-3]です。Hello World 作業開始"  
-3. workers → ./tmp/ファイル作成 → 最後のworker → boss1: "全員作業完了しました"
-4. boss1 → PRESIDENT: "全員完了しました"
+1. PRESIDENT → boss1: "당신은 boss1입니다. Hello World 프로젝트 시작 지시"
+2. boss1 → workers: "당신은 worker[1-3]입니다. Hello World 작업 시작"
+3. workers → ./tmp/파일 작성 → 마지막 worker → boss1: "전원 작업 완료했습니다"
+4. boss1 → PRESIDENT: "전원 완료했습니다"
 ```
 
-## 🔧 手動操作
+## 🔧 수동 조작
 
-### agent-send.shを使った送信
+### agent-send.sh를 사용한 전송
 
 ```bash
-# 基本送信
-./agent-send.sh [エージェント名] [メッセージ]
+# 기본 전송
+./agent-send.sh [에이전트명] [메시지]
 
-# 例
-./agent-send.sh boss1 "緊急タスクです"
-./agent-send.sh worker1 "作業完了しました"
-./agent-send.sh president "最終報告です"
+# 예시
+./agent-send.sh boss1 "긴급 태스크입니다"
+./agent-send.sh worker1 "작업 완료했습니다"
+./agent-send.sh president "최종 보고입니다"
 
-# エージェント一覧確認
+# 에이전트 목록 확인
 ./agent-send.sh --list
 ```
 
-## 🧪 確認・デバッグ
+## 🧪 확인 및 디버그
 
-### ログ確認
+### 로그 확인
 
 ```bash
-# 送信ログ確認
+# 전송 로그 확인
 cat logs/send_log.txt
 
-# 特定エージェントのログ
+# 특정 에이전트의 로그
 grep "boss1" logs/send_log.txt
 
-# 完了ファイル確認
+# 완료 파일 확인
 ls -la ./tmp/worker*_done.txt
 ```
 
-### セッション状態確認
+### 세션 상태 확인
 
 ```bash
-# セッション一覧
+# 세션 목록
 tmux list-sessions
 
-# ペイン一覧
+# 페인 목록
 tmux list-panes -t multiagent
 tmux list-panes -t president
 ```
 
-## 🔄 環境リセット
+## 🔄 환경 리셋
 
 ```bash
-# セッション削除
+# 세션 삭제
 tmux kill-session -t multiagent
 tmux kill-session -t president
 
-# 完了ファイル削除
+# 완료 파일 삭제
 rm -f ./tmp/worker*_done.txt
 
-# 再構築（自動クリア付き）
+# 재구축 (자동 클리어 포함)
 ./setup.sh
 ```
 
 ---
 
-## 📄 ライセンス
+## 📄 라이선스
 
-このプロジェクトは[MIT License](LICENSE)の下で公開されています。
+이 프로젝트는 [MIT License](LICENSE) 하에 공개되어 있습니다.
 
-## 🤝 コントリビューション
+## 🤝 컨트리뷰션
 
-プルリクエストやIssueでのコントリビューションを歓迎いたします！
+풀 리퀘스트나 Issue를 통한 컨트리뷰션을 환영합니다!
 
 ---
 
-🚀 **Agent Communication を体感してください！** 🤖✨ 
+🚀 **Agent Communication 을 체험해 보세요!** 🤖✨

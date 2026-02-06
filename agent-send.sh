@@ -1,35 +1,35 @@
 #!/bin/bash
 
-# 🚀 Agent間メッセージ送信スクリプト
+# 🚀 에이전트 간 메시지 전송 스크립트
 
-# tmuxのbase-indexとpane-base-indexを動的に取得
+# tmux의 base-index와 pane-base-index를 동적으로 취득
 get_tmux_indices() {
     local session="$1"
     local window_index=$(tmux show-options -t "$session" -g base-index 2>/dev/null | awk '{print $2}')
     local pane_index=$(tmux show-options -t "$session" -g pane-base-index 2>/dev/null | awk '{print $2}')
 
-    # デフォルト値
+    # 기본값
     window_index=${window_index:-0}
     pane_index=${pane_index:-0}
 
     echo "$window_index $pane_index"
 }
 
-# エージェント→tmuxターゲット マッピング
+# 에이전트→tmux 타겟 매핑
 get_agent_target() {
     case "$1" in
         "president") echo "president" ;;
         "boss1"|"worker1"|"worker2"|"worker3")
-            # multiagentセッションのindexを動的に取得
+            # multiagent 세션의 index를 동적으로 취득
             if tmux has-session -t multiagent 2>/dev/null; then
                 local indices=($(get_tmux_indices multiagent))
                 local window_index=${indices[0]}
                 local pane_index=${indices[1]}
 
-                # window名で取得（base-indexに依存しない）
+                # window명으로 취득 (base-index에 의존하지 않음)
                 local window_name="agents"
 
-                # pane番号を計算
+                # pane 번호를 계산
                 case "$1" in
                     "boss1") echo "multiagent:$window_name.$((pane_index))" ;;
                     "worker1") echo "multiagent:$window_name.$((pane_index + 1))" ;;
@@ -46,145 +46,145 @@ get_agent_target() {
 
 show_usage() {
     cat << EOF
-🤖 Agent間メッセージ送信
+🤖 에이전트 간 메시지 전송
 
-使用方法:
-  $0 [エージェント名] [メッセージ]
+사용방법:
+  $0 [에이전트명] [메시지]
   $0 --list
 
-利用可能エージェント:
-  president - プロジェクト統括責任者
-  boss1     - チームリーダー  
-  worker1   - 実行担当者A
-  worker2   - 実行担当者B
-  worker3   - 実行担当者C
+이용 가능한 에이전트:
+  president - 프로젝트 총괄 책임자
+  boss1     - 팀 리더
+  worker1   - 실행 담당자A
+  worker2   - 실행 담당자B
+  worker3   - 실행 담당자C
 
-使用例:
-  $0 president "指示書に従って"
-  $0 boss1 "Hello World プロジェクト開始指示"
-  $0 worker1 "作業完了しました"
+사용 예시:
+  $0 president "지시서에 따라주세요"
+  $0 boss1 "Hello World 프로젝트 시작 지시"
+  $0 worker1 "작업 완료했습니다"
 EOF
 }
 
-# エージェント一覧表示
+# 에이전트 목록 표시
 show_agents() {
-    echo "📋 利用可能なエージェント:"
+    echo "📋 이용 가능한 에이전트:"
     echo "=========================="
 
-    # presidentセッション確認
+    # president 세션 확인
     if tmux has-session -t president 2>/dev/null; then
-        echo "  president → president       (プロジェクト統括責任者)"
+        echo "  president → president       (프로젝트 총괄 책임자)"
     else
-        echo "  president → [未起動]        (プロジェクト統括責任者)"
+        echo "  president → [미기동]        (프로젝트 총괄 책임자)"
     fi
 
-    # multiagentセッション確認
+    # multiagent 세션 확인
     if tmux has-session -t multiagent 2>/dev/null; then
         local boss1_target=$(get_agent_target "boss1")
         local worker1_target=$(get_agent_target "worker1")
         local worker2_target=$(get_agent_target "worker2")
         local worker3_target=$(get_agent_target "worker3")
 
-        echo "  boss1     → ${boss1_target:-[エラー]}  (チームリーダー)"
-        echo "  worker1   → ${worker1_target:-[エラー]}  (実行担当者A)"
-        echo "  worker2   → ${worker2_target:-[エラー]}  (実行担当者B)"
-        echo "  worker3   → ${worker3_target:-[エラー]}  (実行担当者C)"
+        echo "  boss1     → ${boss1_target:-[오류]}  (팀 리더)"
+        echo "  worker1   → ${worker1_target:-[오류]}  (실행 담당자A)"
+        echo "  worker2   → ${worker2_target:-[오류]}  (실행 담당자B)"
+        echo "  worker3   → ${worker3_target:-[오류]}  (실행 담당자C)"
     else
-        echo "  boss1     → [未起動]        (チームリーダー)"
-        echo "  worker1   → [未起動]        (実行担当者A)"
-        echo "  worker2   → [未起動]        (実行担当者B)"
-        echo "  worker3   → [未起動]        (実行担当者C)"
+        echo "  boss1     → [미기동]        (팀 리더)"
+        echo "  worker1   → [미기동]        (실행 담당자A)"
+        echo "  worker2   → [미기동]        (실행 담당자B)"
+        echo "  worker3   → [미기동]        (실행 담당자C)"
     fi
 }
 
-# ログ記録
+# 로그 기록
 log_send() {
     local agent="$1"
     local message="$2"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     mkdir -p logs
     echo "[$timestamp] $agent: SENT - \"$message\"" >> logs/send_log.txt
 }
 
-# メッセージ送信
+# 메시지 전송
 send_message() {
     local target="$1"
     local message="$2"
-    
-    echo "📤 送信中: $target ← '$message'"
-    
-    # Claude Codeのプロンプトを一度クリア
+
+    echo "📤 전송 중: $target ← '$message'"
+
+    # Claude Code의 프롬프트를 한 번 클리어
     tmux send-keys -t "$target" C-c
     sleep 0.3
-    
-    # メッセージ送信
+
+    # 메시지 전송
     tmux send-keys -t "$target" "$message"
     sleep 0.1
-    
-    # エンター押下
+
+    # 엔터 입력
     tmux send-keys -t "$target" C-m
     sleep 0.5
 }
 
-# ターゲット存在確認
+# 타겟 존재 확인
 check_target() {
     local target="$1"
     local session_name="${target%%:*}"
-    
+
     if ! tmux has-session -t "$session_name" 2>/dev/null; then
-        echo "❌ セッション '$session_name' が見つかりません"
+        echo "❌ 세션 '$session_name' 을(를) 찾을 수 없습니다"
         return 1
     fi
-    
+
     return 0
 }
 
-# メイン処理
+# 메인 처리
 main() {
     if [[ $# -eq 0 ]]; then
         show_usage
         exit 1
     fi
-    
-    # --listオプション
+
+    # --list 옵션
     if [[ "$1" == "--list" ]]; then
         show_agents
         exit 0
     fi
-    
+
     if [[ $# -lt 2 ]]; then
         show_usage
         exit 1
     fi
-    
+
     local agent_name="$1"
     local message="$2"
-    
-    # エージェントターゲット取得
+
+    # 에이전트 타겟 취득
     local target
     target=$(get_agent_target "$agent_name")
-    
+
     if [[ -z "$target" ]]; then
-        echo "❌ エラー: 不明なエージェント '$agent_name'"
-        echo "利用可能エージェント: $0 --list"
+        echo "❌ 오류: 알 수 없는 에이전트 '$agent_name'"
+        echo "이용 가능한 에이전트: $0 --list"
         exit 1
     fi
-    
-    # ターゲット確認
+
+    # 타겟 확인
     if ! check_target "$target"; then
         exit 1
     fi
-    
-    # メッセージ送信
+
+    # 메시지 전송
     send_message "$target" "$message"
-    
-    # ログ記録
+
+    # 로그 기록
     log_send "$agent_name" "$message"
-    
-    echo "✅ 送信完了: $agent_name に '$message'"
-    
+
+    echo "✅ 전송 완료: $agent_name 에 '$message'"
+
     return 0
 }
 
-main "$@" 
+main "$@"
