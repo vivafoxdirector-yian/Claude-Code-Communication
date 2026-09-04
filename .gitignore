@@ -23,3 +23,6 @@ runtime/
 
 # git 워킹트리 (커밋 안 된 작업이 있을 수 있다. runtime/ 과 성격이 다르다)
 worktrees/
+
+# 스킬 실행 결과물 (스킬 정의가 아니라 특정 프로젝트 리뷰 산출물)
+.claude/skills/*/result/
