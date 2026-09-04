@@ -167,6 +167,29 @@ def cmd_resolve(args):
         else:
             die(str(src) + ": 영역 '" + name + "' 은 경로 문자열이거나 {path, desc} 여야 합니다.")
 
+    # 산출물 자리. 개발 착수 전후로 만드는 문서가 어디에 놓이는지 선언한다.
+    # 정의하지 않으면 그 개념 자체가 없다 (작은 조직은 문서 없이 돌아도 된다).
+    #
+    #   artifacts:
+    #     design: docs/design/
+    #     adr:    { path: docs/adr/, when: decision, desc: "기술 선택 기록" }
+    #
+    # when: decision  결정 시점에만 쓸 수 있다. 사후 작성은 재구성이라 근거가 되지 못한다.
+    # when: anytime   나중에 써도 된다 (현황 설명, 사용 안내 등). 기본값.
+    artifacts = {}
+    for name, spec in (org_meta.get("artifacts") or {}).items():
+        if isinstance(spec, str):
+            artifacts[name] = {"path": spec, "desc": "", "when": "anytime"}
+        elif isinstance(spec, dict):
+            if not spec.get("path"):
+                die(str(src) + ": 산출물 '" + name + "' 에 path 가 없습니다.")
+            when = spec.get("when") or "anytime"
+            if when not in ("decision", "anytime"):
+                die(str(src) + ": 산출물 '" + name + "' 의 when 은 decision 또는 anytime 이어야 합니다.")
+            artifacts[name] = {"path": spec["path"], "desc": spec.get("desc") or "", "when": when}
+        else:
+            die(str(src) + ": 산출물 '" + name + "' 은 경로 문자열이거나 {path, desc, when} 이어야 합니다.")
+
     members, by_id = [], {}
     for order, m in enumerate(members_raw):
         mid = m.get("id")
@@ -404,6 +427,7 @@ def cmd_resolve(args):
         },
         "roles": roles,
         "areas": areas,
+        "artifacts": artifacts,
         "members": members,
         "children": children,
         "roots": roots,
@@ -526,6 +550,39 @@ def cmd_areas(args):
     print("".join(pad(head[i], widths[i]) for i in range(3)) + head[3])
     for r in rows:
         print("".join(pad(r[i], widths[i]) for i in range(3)) + r[3])
+
+
+def cmd_artifacts(args):
+    """산출물 자리. 무엇을 어디에 남기는지, 언제 쓸 수 있는지."""
+    org = load_org()
+    arts = org.get("artifacts") or {}
+    if not arts:
+        print("이 조직도에는 산출물 자리가 정의되어 있지 않습니다.")
+        print("정의하면 구성원이 문서를 어디에 남길지 헤매지 않습니다. 예:")
+        print("  org:")
+        print("    artifacts:")
+        print("      design: docs/design/")
+        print("      adr: { path: docs/adr/, when: decision }")
+        return
+
+    rows = []
+    for name, a in arts.items():
+        when = "결정 시점에만" if a["when"] == "decision" else "언제든"
+        rows.append((name, a["path"], when, a.get("desc") or ""))
+
+    if args.json:
+        print(json.dumps(arts, ensure_ascii=False))
+        return
+
+    head = ("산출물", "경로", "작성 시점", "설명")
+    widths = [max(dwidth(r[i]) for r in (*rows, head)) + 2 for i in range(3)]
+    print("".join(pad(head[i], widths[i]) for i in range(3)) + head[3])
+    for r in rows:
+        print("".join(pad(r[i], widths[i]) for i in range(3)) + r[3])
+    if any(a["when"] == "decision" for a in arts.values()):
+        print()
+        print("'결정 시점에만' 은 나중에 쓰면 근거가 되지 못한다는 뜻이다.")
+        print("무엇을 왜 골랐는지는 고를 때 적어야 한다. 사후에 쓰면 재구성이다.")
 
 
 def cmd_members(args):
@@ -1069,6 +1126,10 @@ def build_parser():
     s = sub.add_parser("areas")
     s.add_argument("--json", action="store_true")
     s.set_defaults(fn=cmd_areas)
+
+    s = sub.add_parser("artifacts")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(fn=cmd_artifacts)
 
     s = sub.add_parser("templates")
     s.add_argument("--json", action="store_true")

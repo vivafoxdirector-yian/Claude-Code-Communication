@@ -16,6 +16,15 @@ org:
   session_prefix: aiorg
   layout: windows
 
+  # 산출물 자리. 구성원이 문서를 어디에 남길지 정한다.
+  # 정의하지 않으면 각자 자리를 발명한다 — 실제로 그런 일이 있었다.
+  # when: decision 은 결정 시점에만 쓸 수 있다는 뜻이다 (사후 작성은 재구성이다).
+  artifacts:
+    design: { path: docs/design/, desc: "기술 설계 — 무엇을 어떻게 만들 것인가" }
+    adr: { path: docs/adr/, when: decision, desc: "기술 선택 기록 — 왜 이걸 골랐는가" }
+    qa: { path: docs/qa/, desc: "테스트 계획·검증 시나리오" }
+    plan: { path: docs/plan/, desc: "작업 분해와 순서" }
+
 roles:
   ceo:
     instruction: org/roles/ceo.md

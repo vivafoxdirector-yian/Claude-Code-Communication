@@ -624,6 +624,7 @@ aiorg — AI 조직 프레임워크
   ./aiorg report [--task <id>] "<본문>" 상급자에게 보고 (실무자)
   ./aiorg members [--skill X] [--ids] 전원의 담당/역량 (배정 상대 고를 때)
   ./aiorg areas                        코드 영역과 담당자 (기존 제품에 붙였을 때)
+  ./aiorg artifacts                    산출물 자리 (설계·ADR·테스트계획 등)
   ./aiorg task list [--mine] [--open]  태스크 목록
   ./aiorg task start|done|block|review|cancel <id> [--note "..."]
   ./aiorg task show <id> / tree
@@ -668,6 +669,7 @@ main() {
     log)      st log "$@" ;;
     members)  st members "$@" ;;
     areas)    st areas "$@" ;;
+    artifacts) st artifacts "$@" ;;
     templates) st templates "$@" ;;
     new)      st new "$@" ;;
     whoami)   aiorg_whoami ;;
