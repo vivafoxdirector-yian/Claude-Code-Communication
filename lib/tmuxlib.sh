@@ -210,6 +210,40 @@ aiorg_ring() {
 # 안내한다. 그런데 워킹트리에는 **커밋 안 된 코드**가 들어 있다.
 # 같은 곳에 두면 "runtime 을 지우면 처음부터 다시 시작" 이라는 안내를 따른 사람이
 # 자기 작업을 날린다. 성격이 다른 것을 같은 통에 담지 않는다.
+# 프레임워크 저장소가 구성원의 커밋을 거부하게 만든다.
+#
+# 왜 필요한가: 구성원은 지시서를 읽으려고 이 저장소를 열어 보게 되는데, 거기서
+# 방향을 잃고 산출물까지 이쪽에 만들어 커밋한 적이 있다. 지시서 문구로도
+# 막지만(brief, _protocol.md 0 절), 텍스트는 어기면 그만이다. 커밋만은
+# 기계가 막는다.
+#
+# 판정: TMUX_PANE 이 조직의 pane 목록에 있고, 커밋 대상이 이 저장소 자신일 때.
+# 워킹트리(worktrees/<id>)는 최상위가 다르므로 걸리지 않는다 — 구성원은
+# 자기 워킹트리에는 정상적으로 커밋해야 한다.
+aiorg_install_commit_guard() {
+  local hook="$AIORG_HOME/.git/hooks/pre-commit"
+  local sig="# aiorg-commit-guard"
+  [[ -d "$AIORG_HOME/.git/hooks" ]] || return 0
+  if [[ -f $hook ]] && ! grep -q "$sig" "$hook" 2>/dev/null; then
+    return 0   # 사람이 만든 훅이 있다. 덮지 않는다.
+  fi
+  cat >"$hook" <<GUARD
+#!/bin/sh
+$sig — ./aiorg up 이 설치했습니다. 지우면 보호가 없어집니다.
+GUARD_HOME='$AIORG_HOME'
+top=\$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+[ "\$top" = "\$GUARD_HOME" ] || exit 0   # 워킹트리는 통과
+panes="\$GUARD_HOME/runtime/panes.tsv"
+[ -n "\$TMUX_PANE" ] && [ -f "\$panes" ] || exit 0
+who=\$(awk -F'	' -v p="\$TMUX_PANE" '\$3==p{print \$1}' "\$panes")
+[ -n "\$who" ] || exit 0
+echo "aiorg: 여기는 aiorg 프레임워크 저장소입니다. 구성원(\$who)은 여기에 커밋하지 않습니다." >&2
+echo "       산출물은 당신의 작업 디렉터리에 만드세요. pwd 로 확인하세요." >&2
+exit 1
+GUARD
+  chmod +x "$hook"
+}
+
 aiorg_worktree_root() { printf '%s/worktrees' "$AIORG_HOME"; }
 
 # 멤버 하나의 워킹트리를 보장한다. 경로를 표준출력으로.
