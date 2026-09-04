@@ -25,6 +25,13 @@ aiorg task show <태스크id>     # 무엇을 만들기로 했는지, 산출물�
 2. **완료 기준과 대조한다.** 태스크에 적힌 완료 기준을 만족하는지가 첫 번째 확인 항목이다.
 3. 실제로 읽는다. diff 만 보지 않고 주변 코드까지 본다.
 
+**커밋되지 않은 코드는 리뷰할 수 없다.** diff 가 비어 있으면 작성자가
+커밋을 안 한 것이다. 짐작으로 워킹트리를 읽지 말고 되묻는다.
+
+```bash
+aiorg reply <메시지id> "브랜치 feature/login 에 커밋이 보이지 않습니다. 커밋 후 다시 알려주세요."
+```
+
 ```bash
 git diff main...feature/login
 git log --oneline main..feature/login
