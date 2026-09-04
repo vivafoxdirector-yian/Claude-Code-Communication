@@ -42,14 +42,24 @@ PyYAML 이 없으면 `pip install pyyaml` 또는 `sudo apt install python3-yaml`
 claude          # 로그인 상태 확인, 필요하면 /login
 ```
 
+### 스킬 연결 (한 번만)
+
+이 저장소에 딸린 스킬을 구성원이 어디서 일하든 쓰게 하려면 한 번 걸어 둔다.
+사본이 아니라 심링크다 — 자세한 것은 [스킬은 어디에 두는가](#스킬은-어디에-두는가--이-저장소에-두고-링크해서-보이게-한다).
+
+```bash
+./aiorg skills --link
+```
+
 ### 권한 허용 목록
 
 구성원들은 사람 없이 돌아가야 하므로 `./aiorg` 명령이 권한 승인 없이 실행되어야 한다.
 [.claude/settings.local.json](../.claude/settings.local.json) 에 구성원용 명령만 허용해 두었다
 (`inbox`, `send`, `reply`, `assign`, `report`, `task`, `status`, `members`, `log`, `whoami`).
 
-조직 자재를 건드리는 `up` / `down` / `launch` / `brief` / `attach` 는 **거부 목록**에 넣었다.
-구성원이 실수로 조직을 내리거나 다시 띄우지 못하게 하기 위해서다. 이건 운영자의 명령이다.
+조직 자재를 건드리는 `up` / `down` / `launch` / `brief` / `attach` / `clean` / `scaffold` / `skills` 는
+**거부 목록**에 넣었다. 구성원이 실수로 조직을 내리거나, 기록을 지우거나, 사용자 홈을
+건드리지 못하게 하기 위해서다. 이건 운영자의 명령이다.
 
 ## 시작하기
 
@@ -336,20 +346,37 @@ dev-2   clean-architecture-design, design-patterns, frontend-design
 > 이 역할은 다음 스킬을 씁니다: python-code-review, security-review.
 > 해당하는 일을 할 때 그 스킬을 먼저 부르세요. 목록에 없으면 없다고 보고하세요.
 
-### 스킬은 어디서 오는가 — 설정할 것이 없다
+### 스킬은 어디에 두는가 — 이 저장소에 두고, 링크해서 보이게 한다
 
-**따로 지정하는 설정은 없다.** Claude Code 가 알아서 두 곳을 본다.
+두 가지가 부딪힌다.
 
-| 위치 | 범위 |
+- **스킬은 프레임워크 재료다.** `architecture-decision` 이나 `python-code-review` 는
+  특정 제품의 것이 아니라 엔지니어링 관행이다. 제품 저장소마다 복사해 두면
+  같은 파일이 여러 벌 생기고 갈라진다. 그래서 원본은 **이 저장소**에 둔다.
+- **그런데 Claude Code 는 세션이 시작한 곳에서 스킬을 찾는다.** 제품 저장소를
+  `workdir` 로 쓰면(권장) 구성원에게는 이 저장소의 `.claude/skills/` 가 안 보인다.
+
+해결은 **사본이 아니라 링크**다. `~/.claude/skills/` 는 어디서든 보이는 자리이고,
+Claude Code 는 그 안의 심링크를 따라간다(실측 확인).
+
+```bash
+./aiorg skills            # 지금 어떤 상태인지
+./aiorg skills --link     # ~/.claude/skills/ 로 심링크. 한 번만 하면 된다
+./aiorg skills --unlink   # 링크만 지운다. 원본은 그대로
+```
+
+원본이 이 저장소에 있으므로 **스킬을 고치면 링크된 모든 곳에 바로 반영된다.**
+`--link` 는 이미 사용자 레벨에 같은 이름의 실제 폴더가 있으면 건드리지 않고 넘어간다 —
+당신이 직접 만든 스킬을 덮지 않는다.
+
+**제품에만 해당하는 스킬**(그 제품의 도메인 규칙, 배포 절차 같은 것)은
+프레임워크 재료가 아니다. 그건 제품 저장소의 `.claude/skills/` 에 둔다.
+
+| 스킬의 성격 | 두는 곳 |
 |---|---|
-| `~/.claude/skills/` | **어디서든** 보인다 (사용자 레벨) |
-| `<프로젝트 루트>/.claude/skills/` | 그 프로젝트 안에서만 |
-
-프로젝트 루트는 세션이 시작한 위치에서 **위로 거슬러 올라가** 찾는다.
-하위 디렉터리에서 시작해도 되고, `.git` 이 있는 곳이 경계다.
-
-`use_skills` 는 스킬을 **가져오는** 설정이 아니다. 위 두 곳에 이미 있는 것 중
-**무엇을 쓸지 알려주는** 것뿐이다. 없는 스킬 이름을 적어도 생기지 않는다.
+| 일반적 엔지니어링 관행 | 이 저장소 `.claude/skills/` → `--link` |
+| 그 제품에서만 쓰는 것 | 제품 저장소 `.claude/skills/` |
+| 개인 취향 | `~/.claude/skills/` 에 직접 (aiorg 가 안 건드린다) |
 
 ### 스킬이 안 보이는 경우
 
@@ -359,7 +386,7 @@ dev-2   clean-architecture-design, design-patterns, frontend-design
 |---|---|
 | `workdir: "."` (기본) | 보인다 |
 | `workdir: docs/` 같은 **하위 디렉터리** | 보인다 — 프로젝트 루트까지 올라가 찾는다 |
-| 외부 제품 저장소 | **안 보인다** (그 저장소에 따로 두면 보인다) |
+| 외부 제품 저장소 | **안 보인다** — `--link` 하거나 그 저장소에 따로 둔다 |
 | git 워킹트리 (`worktree: true`) | **안 보인다** — 자기 `.git` 을 가진 별개 프로젝트라 부모 저장소에 닿지 못한다 |
 
 `up` 이 이 상황을 잡아서 알려준다:
@@ -367,12 +394,11 @@ dev-2   clean-architecture-design, design-patterns, frontend-design
 ```
 경고: 이 저장소의 스킬(python-code-review, ...)을 못 보는 멤버가 있습니다: dev-1, dev-2, qa-1
       Claude Code 는 세션이 시작한 디렉터리에서 스킬을 찾습니다.
-      전원이 쓰게 하려면 ~/.claude/skills/ 로 옮기거나 복사하세요 (어디서든 보입니다).
+      ./aiorg skills --link 를 한 번 실행하면 어디서든 보입니다.
       제품 저장소에서만 쓰려면 그 저장소의 .claude/skills/ 에 두세요.
 ```
 
-**조직 전원이 쓸 스킬은 사용자 레벨(`~/.claude/skills/`)에 두는 것이 가장 확실하다.**
-작업 위치가 어디로 바뀌든 따라간다.
+`--link` 로 걸어 둔 스킬은 이 경고에서 빠진다. 이미 보이니까.
 
 ### skills 는 자유 기입이다
 

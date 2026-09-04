@@ -374,6 +374,11 @@ def cmd_resolve(args):
     if repo_skills.is_dir():
         names = sorted(d.name for d in repo_skills.iterdir() if (d / "SKILL.md").exists())
 
+        # 사용자 레벨(~/.claude/skills/)에 걸리면 작업 위치와 무관하게 보인다.
+        # `aiorg skills --link` 가 거는 심링크가 그것이다.
+        user_skills = Path.home() / ".claude" / "skills"
+        unlinked = [n for n in names if not (user_skills / n).exists()]
+
         def sees_skills(start: Path) -> bool:
             """시작 위치에서 프로젝트 루트까지 올라가며 .claude/skills 를 찾는다."""
             cur = start
@@ -388,17 +393,19 @@ def cmd_resolve(args):
 
         blind = []
         for m in members:
-            start = Path(m.get("workdir_resolved") or str(wd))
+            # 워킹트리는 자기 .git 을 가진 별개 프로젝트라 부모 저장소의
+            # 스킬에 닿지 못한다. 아직 만들어지지 않았어도 결과는 같다.
             if m["worktree"]:
-                start = home() / "runtime" / "worktrees" / m["id"]
-            if not sees_skills(start):
                 blind.append(m["id"])
-        if names and blind:
+                continue
+            if not sees_skills(Path(m.get("workdir_resolved") or str(wd))):
+                blind.append(m["id"])
+        if unlinked and blind:
             warnings.append(
-                "이 저장소의 스킬(" + ", ".join(names) + ")을 못 보는 멤버가 있습니다: "
+                "이 저장소의 스킬(" + ", ".join(unlinked) + ")을 못 보는 멤버가 있습니다: "
                 + ", ".join(blind) + "\n"
                 "      Claude Code 는 세션이 시작한 디렉터리에서 스킬을 찾습니다.\n"
-                "      전원이 쓰게 하려면 ~/.claude/skills/ 로 옮기거나 복사하세요 (어디서든 보입니다).\n"
+                "      ./aiorg skills --link 를 한 번 실행하면 어디서든 보입니다.\n"
                 "      제품 저장소에서만 쓰려면 그 저장소의 .claude/skills/ 에 두세요."
             )
 

@@ -40,11 +40,17 @@
       "Bash(aiorg launch:*)",
       "Bash(aiorg brief:*)",
       "Bash(aiorg attach:*)",
+      "Bash(aiorg clean:*)",
+      "Bash(aiorg scaffold:*)",
+      "Bash(aiorg skills:*)",
       "Bash(./aiorg up:*)",
       "Bash(./aiorg down:*)",
       "Bash(./aiorg launch:*)",
       "Bash(./aiorg brief:*)",
-      "Bash(./aiorg attach:*)"
+      "Bash(./aiorg attach:*)",
+      "Bash(./aiorg clean:*)",
+      "Bash(./aiorg scaffold:*)",
+      "Bash(./aiorg skills:*)"
     ]
   }
 }

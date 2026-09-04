@@ -291,6 +291,86 @@ cmd_down() {
   fi
 }
 
+# 스킬이 어디 있고 구성원이 볼 수 있는지 보여준다. --link 로 연결한다.
+#
+# 스킬은 프레임워크 자재다 — 제품 산출물이 아니므로 이 저장소에 둔다.
+# 그런데 Claude Code 는 세션이 시작한 프로젝트에서 스킬을 찾으므로,
+# workdir 이 제품 저장소면(권장 설정) 여기 있는 스킬이 안 보인다.
+#
+# 사본을 제품 저장소마다 뿌리면 낡는다. 그래서 심링크로 사용자 레벨
+# (~/.claude/skills/)에 걸어 둔다 — 어디서든 보이고, 원본을 고치면 바로 반영된다.
+cmd_skills() {
+  local mode=show
+  while (($#)); do
+    case "$1" in
+      --link) mode=link; shift ;;
+      --unlink) mode=unlink; shift ;;
+      *) die "skills: 알 수 없는 옵션 '$1'" ;;
+    esac
+  done
+
+  local src="$AIORG_HOME/.claude/skills"
+  local dst="$HOME/.claude/skills"
+  [[ -d $src ]] || die "이 저장소에 .claude/skills/ 가 없습니다."
+
+  local -a names=()
+  local d
+  for d in "$src"/*/; do
+    [[ -f "$d/SKILL.md" ]] && names+=("$(basename "$d")")
+  done
+  ((${#names[@]})) || die "스킬이 없습니다 ($src)."
+
+  case "$mode" in
+    show)
+      info "프레임워크 스킬 (원본: .claude/skills/)"
+      info ""
+      local n linked
+      for n in "${names[@]}"; do
+        if [[ -L "$dst/$n" ]]; then
+          linked="연결됨 -> $(readlink "$dst/$n")"
+        elif [[ -e "$dst/$n" ]]; then
+          linked="사용자 레벨에 별도로 있음 (링크 아님)"
+        else
+          linked="연결 안 됨"
+        fi
+        printf '  %-28s %s
+' "$n" "$linked"
+      done
+      info ""
+      info "연결하지 않으면 이 저장소 안에서만 보입니다. 제품 저장소를 workdir 로"
+      info "쓰는 경우(권장) 구성원에게는 안 보이고, up 이 그때 경고합니다."
+      info ""
+      info "연결: ./aiorg skills --link      해제: ./aiorg skills --unlink"
+      info "심링크이므로 사본이 아닙니다 — 원본을 고치면 바로 반영됩니다."
+      ;;
+    link)
+      mkdir -p "$dst"
+      local n done_n=0
+      for n in "${names[@]}"; do
+        if [[ -L "$dst/$n" ]]; then
+          info "  이미 연결됨  $n"
+        elif [[ -e "$dst/$n" ]]; then
+          info "  건너뜀       $n  (사용자 레벨에 별도로 있습니다. 덮지 않습니다)"
+        else
+          ln -s "$src/$n" "$dst/$n" && info "  연결          $n" && done_n=$((done_n + 1))
+        fi
+      done
+      info ""
+      info "$done_n 개 연결. 이제 작업 디렉터리가 어디든 구성원이 이 스킬을 씁니다."
+      ;;
+    unlink)
+      local n gone=0
+      for n in "${names[@]}"; do
+        if [[ -L "$dst/$n" ]]; then
+          rm -f "$dst/$n" && info "  해제          $n" && gone=$((gone + 1))
+        fi
+      done
+      info ""
+      info "$gone 개 해제. 원본은 그대로 있습니다 (.claude/skills/)."
+      ;;
+  esac
+}
+
 # 제품 저장소에 산출물 구조를 깔아준다.
 #
 # 이 저장소는 프레임워크다. 산출물이 놓일 자리는 제품 저장소 것이므로 여기에
@@ -743,6 +823,22 @@ cmd_doctor() {
   else
     printf '  %-11s: 없음  <-- 이 셸에서 claude 를 띄울 수 없습니다\n' "claude"; ok=0
   fi
+  # 스킬은 필수가 아니다. 안 걸려 있으면 알려만 준다.
+  local sdir="$AIORG_HOME/.claude/skills" total=0 linked=0 n
+  if [[ -d $sdir ]]; then
+    for n in "$sdir"/*/; do
+      [[ -f "${n}SKILL.md" ]] || continue
+      total=$((total + 1))
+      [[ -L "$HOME/.claude/skills/$(basename "$n")" ]] && linked=$((linked + 1))
+    done
+  fi
+  if ((total)); then
+    if ((linked == total)); then
+      printf '  스킬       : %d개 모두 연결됨\n' "$total"
+    else
+      printf '  스킬       : %d개 중 %d개 연결  <-- ./aiorg skills --link 로 어디서든 보이게 하세요\n' "$total" "$linked"
+    fi
+  fi
   printf '\n'
   ((ok)) && printf '이상 없습니다.\n' || printf '위의 누락 항목을 먼저 해결하세요.\n'
   ((ok)) || exit 1
@@ -779,6 +875,7 @@ aiorg — AI 조직 프레임워크
   ./aiorg areas                        코드 영역과 담당자 (기존 제품에 붙였을 때)
   ./aiorg artifacts                    산출물 자리 (설계·ADR·테스트계획 등)
   ./aiorg scaffold                     제품 저장소에 산출물 디렉터리를 만든다
+  ./aiorg skills [--link|--unlink]     스킬을 어디서든 보이게 연결 (~/.claude/skills/)
   ./aiorg task list [--mine] [--open]  태스크 목록
   ./aiorg task start|done|block|review|cancel <id> [--note "..."]
   ./aiorg task show <id> / tree
@@ -827,6 +924,7 @@ main() {
     progress) st progress "$@" ;;
     clean)    cmd_clean "$@" ;;
     scaffold) cmd_scaffold "$@" ;;
+    skills)   cmd_skills "$@" ;;
     templates) st templates "$@" ;;
     new)      st new "$@" ;;
     whoami)   aiorg_whoami ;;

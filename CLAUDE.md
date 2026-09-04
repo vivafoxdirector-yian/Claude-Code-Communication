@@ -46,6 +46,7 @@
 ./aiorg brief                   # 각자에게 역할·지시서 안내 전달
 ./aiorg status                  # 조직도 + 각자 상태 + 미확인/진행 현황
 ./aiorg areas                   # 코드 영역과 담당자 (기존 제품에 붙였을 때)
+./aiorg skills [--link]         # 프레임워크 스킬을 어디서든 보이게 연결
 ./aiorg attach [멤버]            # 특정 멤버 화면에 붙기
 ./aiorg notify [--watch]        # 보류된 알림 재시도
 ./aiorg down                    # 세션 종료 (기록은 runtime/ 에 남음)
@@ -87,7 +88,7 @@ cd /mnt/c/git/yian/Claude-Code-Communication
 | `lib/orgstate.py` | 조직도 해석, 메시지 큐, 태스크, 이벤트 로그 |
 | `lib/tmuxlib.sh` | tmux 세션 구성, 상태 감지, 알림 전달 |
 | `org/templates/*.yaml` | 조직 템플릿 10종. 직접 고치지 말고 `new` 로 복사해 쓴다 |
-| `org/*.yaml` | 내 조직도 — 이 파일만 고치면 조직이 바뀐다 |
+| `org/*.yaml` | 내 조직도 — 이 파일만 고치면 조직이 바뀐다. git 추적 안 함 |
 | `org/roles/*.md` | 역할별 지시서 |
 | `runtime/` | 조직 상태 (메시지 큐, 태스크, 로그). 저절로 안 사라진다 — `./aiorg clean` |
 | `worktrees/` | git 워킹트리. **커밋 안 된 코드가 있을 수 있어 runtime/ 과 분리** |

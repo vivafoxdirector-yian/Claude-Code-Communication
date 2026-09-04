@@ -27,6 +27,7 @@ cd /mnt/c/git/yian/Claude-Code-Communication
   python3    : Python 3.12.3
   PyYAML     : 설치됨
   claude     : 2.1.260 (Claude Code)
+  스킬       : 5개 중 0개 연결  <-- ./aiorg skills --link 로 어디서든 보이게 하세요
 
 이상 없습니다.
 ```
@@ -39,6 +40,27 @@ cd /mnt/c/git/yian/Claude-Code-Communication
 ```bash
 claude          # 뜨면 로그인 상태 확인. 필요하면 /login. 확인했으면 Ctrl-D
 ```
+
+**마지막으로 스킬을 걸어 둔다.** 이 저장소에는 구성원이 쓸 스킬 몇 개가 들어 있는데,
+아래 1단계에서 조직이 일할 곳을 이 저장소 밖에 만들기 때문에 그대로 두면 안 보인다.
+사본이 아니라 심링크이므로 한 번만 하면 된다.
+
+```bash
+./aiorg skills --link
+```
+
+```
+  연결          architecture-decision
+  연결          clean-architecture-design
+  연결          design-patterns
+  연결          frontend-design
+  연결          python-code-review
+
+5 개 연결. 이제 작업 디렉터리가 어디든 구성원이 이 스킬을 씁니다.
+```
+
+`~/.claude/skills/` 에 이미 같은 이름의 실제 폴더가 있으면 건너뛴다 —
+당신이 직접 만든 스킬을 덮지 않는다. 되돌리려면 `./aiorg skills --unlink`.
 
 ---
 
