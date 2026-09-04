@@ -691,6 +691,58 @@ def cmd_sessions(args):
 # ---------------------------------------------------------------- 수신자 선택자
 
 
+def cmd_unbriefed(args):
+    """지금 자리에서 아직 brief 를 못 받은 멤버를 나열한다.
+
+    판정: 그 (멤버, pane) 의 마지막 기록이 member.brief 여야 briefed 다.
+    마지막이 member.launch 면 그 뒤에 brief 가 없었다는 뜻이다. 같은 pane 에서
+    claude 를 다시 띄우면 대화 맥락이 사라지므로 그 전의 brief 는 무효다 —
+    그래서 pane 만으로는 부족하고, 기동과 안내의 순서를 봐야 한다.
+
+    brief 를 빼먹으면 구성원이 자기가 조직의 일원인 줄 모른다. 대표조차
+    혼자 다 만들려 든다. 그런데 겉으로는 전원 '대기' 로 보여서 알아챌 수 없다.
+    """
+    org = load_org()
+    panes = {}
+    if args.panes:
+        pf = Path(args.panes)
+        if pf.is_file():
+            for line in pf.read_text(encoding="utf-8").splitlines():
+                cols = line.split("	")
+                if len(cols) >= 3:
+                    panes[cols[0]] = cols[2]
+    # 이벤트 로그는 append-only 이므로 순서가 곧 시간 순서다. 타임스탬프로
+    # 비교하면 초 단위라 launch 와 brief 가 같은 초에 들어올 때 구분되지 않는다.
+    last = {}
+    log = runtime() / "events.jsonl"
+    if log.is_file():
+        with log.open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    e = json.loads(line)
+                except Exception:
+                    continue
+                t = e.get("type")
+                if t not in ("member.launch", "member.brief"):
+                    continue
+                key = (e.get("member"), e.get("pane"))
+                if None in key:
+                    continue
+                last[key] = t
+    out = []
+    for m in org["members"]:
+        mid = m["id"]
+        pane = panes.get(mid)
+        if not pane:
+            continue          # 자리가 없으면 brief 대상도 아니다
+        # 마지막 기록이 기동이면 그 뒤에 brief 가 없다는 뜻이다. 기록이 아예
+        # 없으면 판단할 근거가 없다 — 없는 근거로 경고하면 오탐이 된다.
+        if last.get((mid, pane)) == "member.launch":
+            out.append(mid)
+    for mid in out:
+        print(mid)
+
+
 def cmd_expand(args):
     """선택자를 실제 멤버 id 목록으로 펼친다.
 
@@ -1321,6 +1373,10 @@ def build_parser():
     s.add_argument("--type", action="append")
     s.add_argument("--grep")
     s.set_defaults(fn=cmd_log)
+
+    s = sub.add_parser("unbriefed")
+    s.add_argument("--panes")
+    s.set_defaults(fn=cmd_unbriefed)
 
     s = sub.add_parser("event")
     s.add_argument("--type", required=True)
