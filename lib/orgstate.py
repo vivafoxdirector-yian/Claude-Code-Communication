@@ -190,6 +190,9 @@ def cmd_resolve(args):
             "areas": m.get("areas") or [],
             "workdir": m.get("workdir") or "",
             "worktree": bool(m.get("worktree", False)),
+            # Claude Code 스킬. 조직도의 skills(담당/역량 태그)와는 완전히 다른 것이다.
+            # 이쪽은 실제로 호출되는 스킬 이름이다.
+            "use_skills": m.get("use_skills") or rc.get("use_skills") or [],
             "instruction": m.get("instruction") or rc.get("instruction"),
             "icon": m.get("icon") or rc.get("icon") or DEFAULT_ICONS.get(role, "*"),
             "color": m.get("color") or rc.get("color") or "white",
@@ -265,6 +268,14 @@ def cmd_resolve(args):
         hint = ""
         if (len(raw_wd) > 1 and raw_wd[1] == ":") or "\\" in raw_wd:
             hint = "\n  Windows 경로는 WSL 형식으로 씁니다 — C:\\dev\\myapp 이면 /mnt/c/dev/myapp"
+        elif src.parent == templates_dir():
+            # 템플릿의 자리표시자 경로를 그대로 띄우려 한 경우.
+            hint = (
+                "\n  이 템플릿은 자리표시자 경로를 담고 있습니다. 복사해서 고쳐 쓰세요:"
+                "\n    ./aiorg new " + src.stem + " mycorp"
+                "\n    # org/mycorp.yaml 의 org.workdir 을 실제 제품 경로로 바꾼다"
+                "\n    ./aiorg up --org mycorp"
+            )
         die(
             str(src) + ": 작업 디렉터리가 없습니다 — " + str(wd)
             + "\n  org.workdir(" + raw_wd + ") 을 확인하세요."
@@ -297,6 +308,28 @@ def cmd_resolve(args):
             "담당자가 없는 영역: " + ", ".join(unowned) + "\n"
             "      그 코드를 건드릴 사람이 조직에 없습니다. 멤버의 areas 에 넣거나 영역에서 빼세요."
         )
+
+    # Claude Code 스킬은 세션이 시작한 디렉터리에서 찾는다.
+    # workdir 이 이 저장소 밖이거나 git 워킹트리면 여기 .claude/skills/ 가 보이지 않는다.
+    # 실측: 워킹트리 안에서도 안 보인다 (독립 프로젝트로 인식된다).
+    repo_skills = home() / ".claude" / "skills"
+    if repo_skills.is_dir():
+        names = sorted(d.name for d in repo_skills.iterdir() if (d / "SKILL.md").exists())
+        blind = []
+        for m in members:
+            start = Path(m.get("workdir_resolved") or str(wd))
+            if m["worktree"]:
+                start = home() / "runtime" / "worktrees" / m["id"]
+            if not (start / ".claude" / "skills").is_dir() and start != home():
+                blind.append(m["id"])
+        if names and blind:
+            warnings.append(
+                "이 저장소의 스킬(" + ", ".join(names) + ")을 못 보는 멤버가 있습니다: "
+                + ", ".join(blind) + "\n"
+                "      Claude Code 는 세션이 시작한 디렉터리에서 스킬을 찾습니다.\n"
+                "      전원이 쓰게 하려면 ~/.claude/skills/ 로 옮기거나 복사하세요 (어디서든 보입니다).\n"
+                "      제품 저장소에서만 쓰려면 그 저장소의 .claude/skills/ 에 두세요."
+            )
 
     inbox_root = runtime() / "inbox"
     if inbox_root.exists():

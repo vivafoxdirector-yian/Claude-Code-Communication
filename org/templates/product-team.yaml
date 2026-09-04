@@ -30,18 +30,21 @@ roles:
     icon: "\U0001F3AF"
     color: red
     can_assign: true
+    use_skills: [architecture-decision]
 
   engineer:
     instruction: org/roles/engineer.md
     icon: "\U0001F527"
     color: blue
     can_assign: false
+    use_skills: [clean-architecture-design, design-patterns]
 
   reviewer:
     instruction: org/roles/reviewer.md
     icon: "\U0001F50D"
     color: cyan
     can_assign: false
+    use_skills: [python-code-review, security-review]
 
   # 기획(PO) — 무엇을 만들지 판단해 대표에게 제안한다.
   # can_assign 이 false 인 것이 이 역할의 핵심이다. PO 는 개발팀에 지휘권이 없다.

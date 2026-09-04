@@ -26,6 +26,7 @@ roles:
     instruction: org/roles/engineer.md
     icon: "\U0001F527"
     color: blue
+    use_skills: [clean-architecture-design, design-patterns]
 
 members:
   - id: ceo

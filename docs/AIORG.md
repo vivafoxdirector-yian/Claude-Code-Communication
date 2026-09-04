@@ -206,6 +206,55 @@ Windows 경로를 그대로 쓰면 그것도 안내한다:
 `workdir` 은 *어디서 시작하는가*(셸의 시작 위치), `areas` 는 *어디를 책임지는가*(경계)다.
 둘 다 안 써도 조직은 돌아간다 — 이 저장소에서 전원이 일하게 된다.
 
+### Claude Code 스킬 (use_skills)
+
+조직도의 `skills` 와 **완전히 다른 것**이다. 이름이 비슷해서 헷갈리기 쉬우니 먼저 구분한다.
+
+| | 무엇인가 | 누가 읽나 |
+|---|---|---|
+| `skills` | 담당·역량 **태그**. 자유 기입 | 상급자가 배정할 때 눈으로 본다 |
+| `use_skills` | **실제로 호출되는 Claude Code 스킬 이름** | 구성원이 그 스킬을 부른다 |
+
+역할에 걸어두면 그 역할 전원이 물려받고, 멤버에서 덮어쓸 수 있다.
+
+```yaml
+roles:
+  reviewer:
+    instruction: org/roles/reviewer.md
+    use_skills: [python-code-review, security-review]
+  engineer:
+    use_skills: [clean-architecture-design, design-patterns]
+```
+
+`brief` 가 각자에게 자기 스킬을 알려준다. 안 알려주면 스킬이 있어도 쓰지 않는다.
+
+> 이 역할은 다음 스킬을 씁니다: python-code-review, security-review.
+> 해당하는 일을 할 때 그 스킬을 먼저 부르세요. 목록에 없으면 없다고 보고하세요.
+
+### 스킬이 안 보이는 곳이 있다
+
+**Claude Code 는 세션이 시작한 디렉터리에서 스킬을 찾는다.** 그래서 작업 디렉터리를
+옮기면 이 저장소의 `.claude/skills/` 가 보이지 않는다. 실측 결과다:
+
+| 멤버 작업 위치 | 이 저장소의 스킬 |
+|---|---|
+| `workdir: "."` (기본) | 보인다 |
+| 외부 제품 저장소 | **안 보인다** |
+| git 워킹트리 (`worktree: true`) | **안 보인다** — 물리적으로는 저장소 안이지만 독립 프로젝트로 인식된다 |
+| `~/.claude/skills/` (사용자 레벨) | 어디서든 보인다 |
+
+`up` 이 이 상황을 잡아서 알려준다:
+
+```
+경고: 이 저장소의 스킬(python-code-review, ...)을 못 보는 멤버가 있습니다: dev-1, dev-2, qa-1
+      Claude Code 는 세션이 시작한 디렉터리에서 스킬을 찾습니다.
+      전원이 쓰게 하려면 ~/.claude/skills/ 로 옮기거나 복사하세요 (어디서든 보입니다).
+      제품 저장소에서만 쓰려면 그 저장소의 .claude/skills/ 에 두세요.
+```
+
+**조직 전원이 쓸 스킬은 사용자 레벨(`~/.claude/skills/`)에 두는 것이 가장 확실하다.**
+작업 위치가 어디로 바뀌든 따라간다.
+
 ### skills 는 자유 기입이다
 
 고정 어휘가 없다. 아무 문자열이나 쓸 수 있고 형식을 검증하지 않는다.

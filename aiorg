@@ -216,7 +216,15 @@ cmd_brief() {
     title="$(aiorg_member_field "$id" title)"
     role="$(aiorg_member_field "$id" role)"
     instr="$(aiorg_member_field "$id" instruction)"
-    aiorg_ring "$pane" "당신은 이 조직의 '$id' ($title / 역할 $role) 입니다. org/roles/_protocol.md 와 $instr 를 읽고 규칙을 숙지한 뒤, aiorg inbox 로 수신함을 확인하세요."
+    # 이 역할이 쓰기로 되어 있는 Claude Code 스킬을 함께 알려준다.
+    # 안 알려주면 스킬이 있어도 쓰지 않는다.
+    local useskills msg
+    useskills="$(aiorg_member_field "$id" use_skills)"
+    msg="당신은 이 조직의 '$id' ($title / 역할 $role) 입니다. org/roles/_protocol.md 와 $instr 를 읽고 규칙을 숙지한 뒤, aiorg inbox 로 수신함을 확인하세요."
+    if [[ -n $useskills ]]; then
+      msg+=" 이 역할은 다음 스킬을 씁니다: ${useskills// /, }. 해당하는 일을 할 때 그 스킬을 먼저 부르세요. 목록에 없으면 없다고 보고하세요."
+    fi
+    aiorg_ring "$pane" "$msg"
     st event --type member.brief --kv "member=$id" >/dev/null
     info "  $id 지시서 안내 전달"
     sent=$((sent + 1))
