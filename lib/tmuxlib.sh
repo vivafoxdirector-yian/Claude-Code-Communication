@@ -204,7 +204,13 @@ aiorg_ring() {
 # 주면 브랜치도 작업 파일도 완전히 갈린다. 저장소(.git)는 하나를 공유하므로
 # 서로의 커밋은 그대로 보인다.
 
-aiorg_worktree_root() { printf '%s/runtime/worktrees' "$AIORG_HOME"; }
+# 워킹트리는 runtime/ 밖에 둔다.
+#
+# runtime/ 은 조직 상태(메시지 큐, 태스크, 로그)이고 통째로 지워도 되는 것으로
+# 안내한다. 그런데 워킹트리에는 **커밋 안 된 코드**가 들어 있다.
+# 같은 곳에 두면 "runtime 을 지우면 처음부터 다시 시작" 이라는 안내를 따른 사람이
+# 자기 작업을 날린다. 성격이 다른 것을 같은 통에 담지 않는다.
+aiorg_worktree_root() { printf '%s/worktrees' "$AIORG_HOME"; }
 
 # 멤버 하나의 워킹트리를 보장한다. 경로를 표준출력으로.
 # 사용법: aiorg_ensure_worktree <제품저장소> <멤버id>

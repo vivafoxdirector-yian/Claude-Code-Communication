@@ -94,11 +94,14 @@
 
 ```bash
 ./aiorg down
-rm -rf runtime          # 메시지 큐, 태스크, 이벤트 로그가 전부 사라진다
+./aiorg clean --force   # 메시지 큐, 태스크, 이벤트 로그가 사라진다
 ./aiorg up --org product-team
 ```
 
-`docs/` 의 산출물은 지워지지 않는다.
+`clean` 은 무엇을 잃는지 먼저 보여준다(`--force` 없이 실행). `rm -rf runtime` 을
+직접 하지 않는다 — 조직이 아직 도는지, 커밋 안 된 작업이 있는지 확인해 주기 때문이다.
+
+`docs/` 의 산출물과 `worktrees/` 의 코드는 지워지지 않는다.
 
 ## 고칠 때 알아둘 것
 

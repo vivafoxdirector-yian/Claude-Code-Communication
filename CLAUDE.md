@@ -36,6 +36,7 @@
 ./aiorg attach [멤버]            # 특정 멤버 화면에 붙기
 ./aiorg notify [--watch]        # 보류된 알림 재시도
 ./aiorg down                    # 세션 종료 (기록은 runtime/ 에 남음)
+./aiorg clean [--force]         # runtime/ 정리 (무엇을 잃는지 먼저 보여준다)
 ./aiorg log                     # 이벤트 로그
 ```
 
@@ -75,7 +76,8 @@ cd /mnt/c/git/yian/Claude-Code-Communication
 | `org/templates/*.yaml` | 조직 템플릿 10종. 직접 고치지 말고 `new` 로 복사해 쓴다 |
 | `org/*.yaml` | 내 조직도 — 이 파일만 고치면 조직이 바뀐다 |
 | `org/roles/*.md` | 역할별 지시서 |
-| `runtime/` | 실행 중 상태 (메시지 큐, 태스크, 로그). git 추적 안 함 |
+| `runtime/` | 조직 상태 (메시지 큐, 태스크, 로그). 저절로 안 사라진다 — `./aiorg clean` |
+| `worktrees/` | git 워킹트리. **커밋 안 된 코드가 있을 수 있어 runtime/ 과 분리** |
 | `docs/voc/raw/` | 고객 발언 원문. **사람만 쓴다** — 구성원은 읽기 전용 |
 | `docs/sales/` | 영업 자료 (프리세일즈 작성 → PO 사실확인 → 대표 승인) |
 | `docs/product/` | 조사 결과, 요구사항 정의서 (PO 작성) |

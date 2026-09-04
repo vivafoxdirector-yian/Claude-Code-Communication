@@ -20,3 +20,6 @@ Thumbs.db
 .idea/ 
 # aiorg 런타임 (메시지 큐, 태스크, 이벤트 로그)
 runtime/
+
+# git 워킹트리 (커밋 안 된 작업이 있을 수 있다. runtime/ 과 성격이 다르다)
+worktrees/

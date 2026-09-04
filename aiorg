@@ -273,6 +273,72 @@ cmd_down() {
   fi
 }
 
+# runtime/ 을 정리한다. 손으로 rm -rf 하게 두면 사고가 나기 때문에 명령으로 감싼다.
+cmd_clean() {
+  local force=0
+  while (($#)); do
+    case "$1" in
+      --force|-f) force=1; shift ;;
+      *) die "clean: 알 수 없는 옵션 '$1'" ;;
+    esac
+  done
+
+  local rt="$AIORG_HOME/runtime"
+  if [[ ! -d $rt ]]; then
+    info "runtime/ 이 없습니다. 정리할 것이 없습니다."
+    return 0
+  fi
+
+  # 세션이 살아 있으면 거부한다. 도는 조직의 발밑을 빼는 셈이다.
+  local alive=0 dept
+  while IFS=$'	' read -r dept _; do
+    [[ -n $dept ]] || continue
+    tmux has-session -t "$(aiorg_session_name "$dept")" 2>/dev/null && alive=1
+  done < <(st sessions 2>/dev/null)
+  if ((alive)); then
+    die "조직이 아직 돌고 있습니다. ./aiorg down 을 먼저 실행하세요."
+  fi
+
+  # 무엇을 잃는지 먼저 보여준다.
+  local ntask nmsg
+  ntask="$(find "$rt/tasks" -name '*.json' 2>/dev/null | wc -l)"
+  nmsg="$(find "$rt/inbox" -name '*.json' 2>/dev/null | wc -l)"
+  info "지워질 것:"
+  info "  태스크      ${ntask}건 (진행 중이던 것 포함)"
+  info "  메시지      ${nmsg}건"
+  info "  이벤트 로그 $(wc -l <"$rt/events.jsonl" 2>/dev/null || echo 0)줄"
+  info ""
+  info "남는 것:"
+  info "  docs/ 의 산출물 — 요구사항 정의서, 설계, 조사 결과 등"
+  info "  worktrees/ 의 코드와 브랜치 — 커밋 안 된 작업까지"
+
+  # 커밋 안 된 작업이 있으면 반드시 알린다. 지금 지우는 것과 직접 상관은 없지만,
+  # 이 시점에 조직을 정리하려는 사람은 그것도 정리할 생각일 가능성이 높다.
+  local wt dirty=""
+  for wt in "$(aiorg_worktree_root)"/*/; do
+    [[ -d $wt ]] || continue
+    if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
+      dirty+=" $(basename "$wt")"
+    fi
+  done
+  if [[ -n $dirty ]]; then
+    info ""
+    info "주의 — 커밋 안 된 작업이 남은 워킹트리:$dirty"
+    info "  worktrees/ 는 이 명령이 건드리지 않습니다. 다만 그쪽을 정리하실 거라면"
+    info "  먼저 커밋하거나 내용을 확인하세요. 지우면 되돌릴 수 없습니다."
+  fi
+
+  if ((!force)); then
+    info ""
+    info "실제로 지우려면 --force 를 붙이세요:  ./aiorg clean --force"
+    return 0
+  fi
+
+  rm -rf "$rt"
+  info ""
+  info "runtime/ 을 지웠습니다. 다음 ./aiorg up 은 빈 상태에서 시작합니다."
+}
+
 cmd_status() {
   local live=""
   if [[ -f "$(aiorg_panes_file)" && -s "$(aiorg_panes_file)" ]]; then
@@ -619,6 +685,7 @@ aiorg — AI 조직 프레임워크
   ./aiorg notify [--watch]             보류된 알림 재시도
   ./aiorg attach [멤버]                 세션/특정 멤버 화면에 붙기
   ./aiorg down                         세션 종료 (기록은 남음)
+  ./aiorg clean [--force]              runtime/ 정리 — 무엇을 잃는지 먼저 보여준다
   ./aiorg log [--limit N] [--grep S]   이벤트 로그
   ./aiorg doctor                       실행 환경 점검
   ./aiorg explain <멤버>                상태 감지가 어긋날 때 원인 진단
@@ -679,6 +746,7 @@ main() {
     areas)    st areas "$@" ;;
     artifacts) st artifacts "$@" ;;
     progress) st progress "$@" ;;
+    clean)    cmd_clean "$@" ;;
     templates) st templates "$@" ;;
     new)      st new "$@" ;;
     whoami)   aiorg_whoami ;;
