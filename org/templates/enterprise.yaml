@@ -141,6 +141,8 @@ members:
     role: engineer
     reports_to: fe-lead
     session: frontend
+    # 프론트 담당에게만 얹는다. 역할(engineer)이 주는 스킬에 더해진다.
+    use_skills: [frontend-design]
     skills: [typescript, ui, 상태관리]
 
   # ---- 품질부 ----

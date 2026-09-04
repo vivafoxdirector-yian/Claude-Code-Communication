@@ -286,16 +286,31 @@ aiorg artifacts
 | `skills` | 담당·역량 **태그**. 자유 기입 | 상급자가 배정할 때 눈으로 본다 |
 | `use_skills` | **실제로 호출되는 Claude Code 스킬 이름** | 구성원이 그 스킬을 부른다 |
 
-역할에 걸어두면 그 역할 전원이 물려받고, 멤버에서 덮어쓸 수 있다.
+역할에 걸어두면 그 역할 전원이 물려받는다. 멤버에 쓴 것은 **덮어쓰지 않고 더해진다.**
 
 ```yaml
 roles:
   reviewer:
-    instruction: org/roles/reviewer.md
     use_skills: [python-code-review, security-review]
   engineer:
     use_skills: [clean-architecture-design, design-patterns]
+
+members:
+  - id: dev-2
+    role: engineer
+    use_skills: [frontend-design] # 역할 것 2개 + 이것 = 3개
 ```
+
+```
+dev-1   clean-architecture-design, design-patterns
+dev-2   clean-architecture-design, design-patterns, frontend-design
+```
+
+더해지는 쪽으로 정한 이유가 있다. 같은 역할 안에서도 사람마다 하는 일이 갈린다 —
+프론트 담당에게만 `frontend-design` 을 얹고 싶은데, 덮어쓰기라면 역할이 주던
+스킬을 되풀어 적어야 한다. 그러면 역할 쪽을 고칠 때 멤버 쪽이 따라오지 않는다.
+
+역할 자체를 다르게 하려면 `roles` 에 새 역할을 만든다.
 
 `brief` 가 각자에게 자기 스킬을 알려준다. 안 알려주면 스킬이 있어도 쓰지 않는다.
 

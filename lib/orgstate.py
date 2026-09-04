@@ -126,6 +126,15 @@ def resolve_org_path(arg: str) -> Path:
     die("조직도를 찾을 수 없습니다: " + arg + hint + "\n  목록은 ./aiorg templates")
 
 
+def _merge_skills(role_skills, member_skills) -> list:
+    """역할 스킬 + 멤버 스킬. 순서를 지키고 중복은 뺀다."""
+    out = []
+    for s in list(role_skills or []) + list(member_skills or []):
+        if s not in out:
+            out.append(s)
+    return out
+
+
 def resolved_workdir(w: str) -> Path:
     """조직도의 workdir 을 절대경로로. 상대경로는 AIORG_HOME 기준."""
     p = Path(w)
@@ -215,7 +224,10 @@ def cmd_resolve(args):
             "worktree": bool(m.get("worktree", False)),
             # Claude Code 스킬. 조직도의 skills(담당/역량 태그)와는 완전히 다른 것이다.
             # 이쪽은 실제로 호출되는 스킬 이름이다.
-            "use_skills": m.get("use_skills") or rc.get("use_skills") or [],
+            # 역할이 주는 것에 멤버 것을 **더한다**. 덮어쓰지 않는다.
+            # 프론트 담당에게 frontend-design 만 얹고 싶을 때 역할이 주던
+            # 스킬을 되풀어 적지 않아도 되게 하려는 것이다.
+            "use_skills": _merge_skills(rc.get("use_skills"), m.get("use_skills")),
             "instruction": m.get("instruction") or rc.get("instruction"),
             "icon": m.get("icon") or rc.get("icon") or DEFAULT_ICONS.get(role, "*"),
             "color": m.get("color") or rc.get("color") or "white",

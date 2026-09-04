@@ -145,6 +145,8 @@ members:
     session: dev
     areas: [frontend]
     worktree: true
+    # 프론트 담당에게만 얹는다. 역할(engineer)이 주는 스킬에 더해진다.
+    use_skills: [frontend-design]
     skills: [typescript, ui]
 
   # 인프라를 겸하는 사람. 영역을 둘 이상 맡아도 된다.

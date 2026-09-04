@@ -133,6 +133,8 @@ members:
     role: engineer
     reports_to: dev-lead
     session: dev
+    # 프론트 담당에게만 얹는다. 역할(engineer)이 주는 스킬에 더해진다.
+    use_skills: [frontend-design]
     skills: [frontend, typescript, ui]
 
   # ---- 품질부 ----
