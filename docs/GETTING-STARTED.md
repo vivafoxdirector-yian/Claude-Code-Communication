@@ -125,8 +125,14 @@ claude 기동 중 (명령: claude)...
 `응답대기` 인 멤버가 있으면 붙어서 답한다.
 
 ```bash
-./aiorg attach dev-1      # 1 을 고르고 Enter, 그다음 Ctrl-b d 로 빠져나온다
+./aiorg attach dev-1
 ```
+
+**선택지 순서를 확인하고 고른다.** 기본 커서가 `No, exit` 에 있는 경우가 있어서
+그냥 Enter 를 누르면 claude 가 종료된다. 화살표로 `Yes, I trust this folder` 로
+옮긴 뒤 Enter 를 누른다. 답했으면 `Ctrl-b d` 로 빠져나온다.
+
+claude 가 꺼진 자리는 `미가동` 으로 잡힌다. 그 pane 에서 `claude` 를 다시 치면 된다.
 
 전원이 `대기` 가 되면 다음으로 간다.
 

@@ -106,8 +106,16 @@ AIORG_PAT_IDLE='\? for shortcuts|shift\+tab to cycle|for agents|auto mode on|acc
 # 판정 순서가 중요하다: 대화상자 화면에도 입력 상자 테두리가 있어서,
 # idle 검사를 먼저 하면 대화상자에 벨을 쏘게 된다.
 aiorg_member_state() {
-  local pane="$1" cap
+  local pane="$1" cap cmd
   aiorg_pane_alive "$pane" || { printf 'down\n'; return; }
+
+  # 화면 글자를 읽기 전에 프로세스를 먼저 본다.
+  # claude 가 종료되고 셸로 돌아왔는데 스크롤백에 옛 대화상자 문구가 남아 있으면
+  # 화면만 보고는 '응답대기' 로 오판한다. 실제로 겪은 일이다.
+  cmd="$(tmux display-message -p -t "$pane" '#{pane_current_command}' 2>/dev/null)"
+  case "$cmd" in
+    sh|bash|zsh|fish|dash|tcsh|ksh) printf 'down\n'; return ;;
+  esac
 
   cap="$(tmux capture-pane -p -t "$pane" -S -40 2>/dev/null)" || { printf 'down\n'; return; }
 
@@ -216,6 +224,13 @@ aiorg_ensure_worktree() {
   else
     git -C "$repo" worktree add -b "$branch" "$wt" >/dev/null 2>&1 || return 1
   fi
+
+  # 워킹트리는 이 저장소 아래(/mnt/c, Windows 파일시스템)에 만들어지는데
+  # 제품 저장소는 다른 파일시스템(ext4)일 수 있다. drvfs 는 모든 파일을 755 로
+  # 보고하므로 git 이 전 파일을 "mode 100644 -> 100755" 로 변경된 것처럼 본다.
+  # 그러면 개발자가 자기 변경만 골라 커밋해도 mode 변경이 딸려 들어가고,
+  # 리뷰어가 볼 diff 가 무의미하게 커진다.
+  git -C "$wt" config core.fileMode false 2>/dev/null || true
   printf '%s\n' "$wt"
 }
 

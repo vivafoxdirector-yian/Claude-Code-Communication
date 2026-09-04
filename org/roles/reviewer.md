@@ -32,9 +32,23 @@ aiorg task show <태스크id>     # 무엇을 만들기로 했는지, 산출물�
 aiorg reply <메시지id> "브랜치 feature/login 에 커밋이 보이지 않습니다. 커밋 후 다시 알려주세요."
 ```
 
+**어느 저장소에서 볼지 먼저 확인한다.** 조직의 작업 디렉터리는 제품 저장소이고,
+프레임워크 저장소가 아니다. 자기 워킹트리를 받았다면 거기가 기준이다.
+
 ```bash
-git diff main...feature/login
-git log --oneline main..feature/login
+pwd                              # 내가 어디에 있는지
+git rev-parse --show-toplevel    # 지금 저장소가 어디인지
+```
+
+**기준 브랜치 이름을 짐작하지 않는다.** `main` 인 저장소도 `master` 인 저장소도 있다.
+
+```bash
+git branch -a                    # 실제로 있는 브랜치를 본다
+```
+
+```bash
+git diff <기준브랜치>...<대상브랜치>      # 예: git diff master...aiorg/dev-1
+git log --oneline <기준브랜치>..<대상브랜치>
 ```
 
 ## 무엇을 보는가 (우선순위 순)

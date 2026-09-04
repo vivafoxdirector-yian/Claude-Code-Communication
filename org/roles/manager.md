@@ -126,10 +126,13 @@ aiorg task list --status blocked
 먼저 무엇이 있는지 본다.
 
 ```bash
-git branch -a                          # 어떤 브랜치가 있는지
-git log --oneline main..aiorg/dev-1    # dev-1 이 무엇을 커밋했는지
-git diff --stat main...aiorg/dev-1     # 얼마나 바뀌었는지
+git rev-parse --show-toplevel          # 지금 어느 저장소인지 (제품 저장소여야 한다)
+git branch -a                          # 어떤 브랜치가 있는지. 기준 브랜치 이름도 여기서 본다
+git log --oneline <기준>..aiorg/dev-1  # dev-1 이 무엇을 커밋했는지
+git diff --stat <기준>...aiorg/dev-1   # 얼마나 바뀌었는지
 ```
+
+**기준 브랜치 이름을 짐작하지 않는다.** `main` 인 저장소도 `master` 인 저장소도 있다.
 
 **커밋이 없으면 완료가 아니다.** 부하가 done 이라고 했는데 브랜치에 커밋이 없으면
 워킹트리에만 있는 것이다. 되돌린다.

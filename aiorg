@@ -181,7 +181,11 @@ PY
 }
 
 cmd_launch() {
-  local cmdline="${AIORG_CLAUDE_CMD:-claude}"
+  # 구성원의 작업 디렉터리가 이 저장소 밖이면(기존 제품에 붙인 경우, 워킹트리)
+  # 역할 지시서(org/roles/*.md)가 작업 디렉터리 밖이 된다. 그러면 brief 를 받자마자
+  # "작업 디렉터리 밖 읽기를 허용하시겠습니까?" 대화상자가 떠서 조직 전체가 멈춘다.
+  # --add-dir 로 이 저장소를 읽을 수 있는 곳에 넣어 준다.
+  local cmdline="${AIORG_CLAUDE_CMD:-claude --add-dir \"$AIORG_HOME\"}"
   local id sess pane count=0
   [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
   info "claude 기동 중 (명령: $cmdline)..."
