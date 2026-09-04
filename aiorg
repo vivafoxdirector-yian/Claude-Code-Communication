@@ -19,17 +19,55 @@ AIORG_PY="${AIORG_PY:-python3}"
 export AIORG_PY
 STATE="$AIORG_HOME/lib/orgstate.py"
 
-# 기본 조직도. AIORG_ORG 로 덮을 수 있다.
-# 내가 만든 org/default.yaml 이 있으면 그것을 쓰고, 없으면 표준 템플릿으로 뜬다.
-# 템플릿을 직접 고치는 대신 `./aiorg new` 로 복사해 쓰라는 뜻이다 —
-# 그래야 프레임워크를 갱신해도 내 조직도가 덮이지 않는다.
+# 기본 조직도를 고르는 순서. --org 를 붙였으면 그것이 언제나 이긴다.
+#
+#   1. AIORG_ORG 환경변수
+#   2. org/default.yaml
+#   3. 지금 떠 있는 조직 (runtime 에 기록된 것)
+#   4. org/ 에 내 조직도가 딱 하나면 그것
+#   5. 표준 템플릿
+#
+# 3, 4 가 없던 탓에 겪은 것: org/mycorp.yaml 을 만들어 놓고 `./aiorg up` 을
+# --org 없이 치면 조용히 템플릿으로 떴다. 템플릿은 workdir 이 "." 이라
+# 조직이 이 프레임워크 저장소에서 일하기 시작한다. 경고는 나오지만 늦다.
+# 내 조직도가 하나뿐이면 그걸 쓰려던 것이 거의 확실하다.
+AIORG_ORG_CANDIDATES=""
 if [[ -n ${AIORG_ORG:-} ]]; then
   DEFAULT_ORG="$AIORG_ORG"
 elif [[ -f "$AIORG_HOME/org/default.yaml" ]]; then
   DEFAULT_ORG="org/default.yaml"
 else
-  DEFAULT_ORG="org/templates/product-team.yaml"
+  # 지금 떠 있는 조직을 따라간다. up 이후의 모든 명령이 같은 조직을 보게 된다.
+  aiorg_running_org=""
+  if [[ -f "$AIORG_HOME/runtime/org.resolved.json" ]]; then
+    aiorg_running_org="$("$AIORG_PY" - <<'RESOLVED' 2>/dev/null || true
+import json, os, pathlib
+p = pathlib.Path(os.environ["AIORG_HOME"]) / "runtime" / "org.resolved.json"
+try:
+    src = json.loads(p.read_text(encoding="utf-8")).get("source", "")
+except Exception:
+    src = ""
+if src and pathlib.Path(src).is_file():
+    print(src)
+RESOLVED
+)"
+  fi
+  # 내가 만든 조직도 목록 (템플릿은 org/templates/ 아래라 여기 안 걸린다)
+  aiorg_org_list=()
+  for f in "$AIORG_HOME"/org/*.yaml; do
+    [[ -f $f ]] && aiorg_org_list+=("$f")
+  done
+  AIORG_ORG_CANDIDATES="$(printf '%s
+' "${aiorg_org_list[@]:-}")"
+  if [[ -n $aiorg_running_org ]]; then
+    DEFAULT_ORG="$aiorg_running_org"
+  elif [[ ${#aiorg_org_list[@]} -eq 1 ]]; then
+    DEFAULT_ORG="${aiorg_org_list[0]}"
+  else
+    DEFAULT_ORG="org/templates/product-team.yaml"
+  fi
 fi
+export AIORG_ORG_CANDIDATES
 
 # shellcheck source=lib/tmuxlib.sh
 source "$AIORG_HOME/lib/tmuxlib.sh"
@@ -97,14 +135,30 @@ send_one() {
 # ---------------------------------------------------------------- 서브커맨드
 
 cmd_up() {
-  local orgfile="$DEFAULT_ORG" launch=0
+  local orgfile="$DEFAULT_ORG" launch=0 explicit=0
   while (($#)); do
     case "$1" in
-      --org) orgfile="$2"; shift 2 ;;
+      --org) orgfile="$2"; explicit=1; shift 2 ;;
       --launch) launch=1; shift ;;
       *) die "up: 알 수 없는 옵션 '$1'" ;;
     esac
   done
+
+  # 내 조직도가 둘 이상인데 --org 를 안 붙였다면 고르게 한다. 조용히 템플릿으로
+  # 뜨면 조직이 이 프레임워크 저장소에서 일하기 시작하고(템플릿의 workdir 은 ".")
+  # 알아챌 때는 이미 파일이 쌓여 있다.
+  if [[ $explicit -eq 0 && $orgfile == org/templates/* && -n ${AIORG_ORG_CANDIDATES:-} ]]; then
+    local n
+    n="$(grep -c . <<<"$AIORG_ORG_CANDIDATES")"
+    if [[ ${n:-0} -gt 1 ]]; then
+      die "org/ 에 조직도가 ${n}개 있습니다. 어느 것으로 띄울지 지정하세요.
+
+$(while read -r f; do [[ -n $f ]] && printf '  ./aiorg up --org %s
+' "$(basename "${f%.yaml}")"; done <<<"$AIORG_ORG_CANDIDATES")
+
+  매번 붙이기 싫으면 하나를 org/default.yaml 로 두거나 AIORG_ORG 를 쓰세요."
+    fi
+  fi
 
   command -v tmux >/dev/null || die "tmux 를 찾을 수 없습니다. WSL 안에서 실행하고 있는지 확인하세요."
 
