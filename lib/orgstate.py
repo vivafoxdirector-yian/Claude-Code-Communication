@@ -317,6 +317,24 @@ def cmd_resolve(args):
             + "\n  비우면 이 저장소(" + str(home()) + ")가 기본입니다." + hint
         )
 
+    # 작업 디렉터리가 프레임워크 저장소 자체면 산출물이 여기에 쌓인다.
+    # 실제로 겪은 일이다: 조직이 url-shortener/ (.venv 포함) 와 docs/adr/, docs/qa/ 를
+    # 이 저장소 안에 만들어서 손으로 지워야 했다. git 에 올릴 것도 아닌데 섞인다.
+    # 코드를 쓰는 역할이 있을 때만 경고한다 — 기획만 하는 조직은 문서뿐이라 덜 문제다.
+    if wd.resolve() == home().resolve():
+        writers = [m["id"] for m in members if m["role"] in ("engineer",)]
+        if writers:
+            warnings.append(
+                "작업 디렉터리가 이 프레임워크 저장소입니다 (" + str(wd) + ").\n"
+                "      구성원이 만드는 코드와 문서가 여기에 쌓입니다. 코드를 쓰는 역할: "
+                + ", ".join(writers) + "\n"
+                "      제품 저장소를 따로 두는 편이 낫습니다:\n"
+                "        org:\n"
+                "          workdir: \"/경로/내제품\"\n"
+                "      그냥 한 번 돌려보는 것이라면 그대로 두어도 됩니다. 다만 끝나고\n"
+                "      git status 로 남은 것을 확인하세요 — 이 저장소에 커밋할 것이 아닙니다."
+            )
+
     # 멤버별 작업 위치. 지정하지 않으면 조직 workdir 을 쓴다.
     for m in members:
         if not m["workdir"]:

@@ -42,7 +42,26 @@ claude          # 뜨면 로그인 상태 확인. 필요하면 /login. 확인했
 
 ---
 
-## 1. 내 조직도 만들기
+## 1. 조직이 일할 곳을 만든다
+
+**이 프레임워크 저장소에서 조직을 돌리지 않는다.** 구성원이 만드는 코드와 문서가
+여기에 쌓여서, git 에 올릴 것도 아닌 것들이 섞인다.
+
+연습용 저장소를 하나 만든다. 빈 디렉터리면 된다.
+
+```bash
+mkdir -p ~/aiorg-practice && cd ~/aiorg-practice
+git init -q
+echo "# 연습용" > README.md
+git add -A && git commit -qm "초기 커밋"
+pwd                                  # 이 경로를 다음 단계에서 쓴다
+cd -                                 # 프레임워크 저장소로 돌아온다
+```
+
+git 저장소로 만드는 이유가 있다 — 구성원은 커밋을 하게 되어 있고,
+`worktree` 를 쓰면 git 저장소가 필수다.
+
+## 2. 내 조직도 만들기
 
 템플릿을 직접 고치지 않는다. 복사해서 쓴다.
 
@@ -57,10 +76,26 @@ claude          # 뜨면 로그인 상태 확인. 필요하면 /login. 확인했
 ```
 
 `org/mycorp.yaml` 이 이제 **당신 조직도**다. 프레임워크를 갱신해도 덮이지 않는다.
-지금은 고칠 것이 없다 — `workdir` 이 `"."` 이라 이 저장소에서 일한다.
+한 줄만 고친다 — 방금 만든 곳을 가리키게 한다.
 
-> 이미 있는 제품에 붙이려면 `product-team` 대신 `existing-product` 를 복사하고
-> `org.workdir` 을 제품 저장소 경로로 바꾼다. [AIORG.md](AIORG.md) 참고.
+```yaml
+org:
+  workdir: "/home/사용자명/aiorg-practice" # 1 단계의 pwd 값
+```
+
+Windows 경로는 WSL 형식으로 쓴다 — `C:\dev\myapp` 이면 `/mnt/c/dev/myapp`.
+경로가 틀리면 `up` 이 거부하니 오타는 바로 드러난다.
+
+고치지 않고 그냥 돌려도 동작은 하지만, `up` 이 이렇게 경고한다:
+
+```
+경고: 작업 디렉터리가 이 프레임워크 저장소입니다.
+      구성원이 만드는 코드와 문서가 여기에 쌓입니다. 코드를 쓰는 역할: dev-1, dev-2
+      제품 저장소를 따로 두는 편이 낫습니다
+```
+
+> 이미 있는 제품에 붙이려면 `product-team` 대신 `existing-product` 를 복사한다.
+> 코드 영역(`areas`)과 멤버별 워킹트리까지 준비된 형태다. [AIORG.md](AIORG.md) 참고.
 
 ---
 
@@ -278,21 +313,37 @@ cd /mnt/c/git/yian/Claude-Code-Communication
 대표는 조직 내부 사정(태스크 id 나열)이 아니라 **무엇이 완성됐고, 무엇이 남았고,
 무엇을 결정해야 하는지**를 사람 말로 정리해 답하도록 되어 있다.
 
-파일로 직접 볼 수도 있다.
+파일로 직접 볼 수도 있다. **산출물은 조직의 작업 디렉터리에 생긴다** —
+이 프레임워크 저장소가 아니라 2 단계에서 지정한 곳이다.
 
 ```bash
-./aiorg task show <태스크id>     # 산출물 경로, 브랜치, 상태 이력
-git log --oneline -20
-git status --short               # 조직이 새로 만든 파일
+cd ~/aiorg-practice              # 조직이 일한 곳
+git log --oneline -20            # 구성원들이 남긴 커밋
+git status --short               # 아직 커밋 안 된 것
+find docs -type f                # 문서 산출물
+cd -
 ```
 
-위 예시(URL 단축기)를 실제로 돌렸을 때 나온 것:
+프레임워크 저장소 쪽도 확인해 둔다. **깨끗해야 정상이다.**
+
+```bash
+git status --short                # runtime/ 과 worktrees/ 는 무시되므로 안 보인다
+./aiorg task show <태스크id>       # 산출물 경로, 브랜치, 상태 이력
+```
+
+위 예시(URL 단축기)를 실제로 돌렸을 때 나온 것 — 전부 **작업 디렉터리 안**이다:
 
 ```
 docs/product/specs/url-shortener.md        149줄   PO — 요구사항 정의서
 docs/adr/ADR-0001-url-shortener-stack.md    58줄   개발팀장 — 기술 선택 기록
 docs/qa/url-shortener-checklist.md         175줄   품질팀 — 검증 시나리오
+url-shortener/                                    개발자 — 실제 구현
 ```
+
+조직도의 `artifacts` 경로(`docs/design/` 등)와 역할 지시서의 경로
+(`docs/product/specs/`, `docs/voc/raw/`)는 모두 **작업 디렉터리 기준**이다.
+프레임워크 저장소에 같은 이름의 디렉터리가 있는 것은 `workdir` 을 안 바꿨을 때의
+기본 자리이자 규약 설명용이다. 실제 산출물은 제품 쪽에 쌓인다.
 
 `docs/adr/` 는 시키지 않은 것이다. 개발팀장 역할에
 `use_skills: [architecture-decision]` 이 걸려 있어서, 기술 스택을 정할 때
