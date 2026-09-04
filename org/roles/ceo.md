@@ -210,6 +210,7 @@ aiorg assign dev-lead "세션 저장소 설계 문서 정리" --detail "주인 �
 
 ```bash
 aiorg status       # 누가 대기/작업중인지, 미확인 메시지가 쌓인 곳
+aiorg progress     # 진행 중인 일과 각자의 최신 기록 — 지금 뭐 하고 있는지
 aiorg task tree    # 태스크가 어디서 막혔는지
 aiorg log --limit 30
 ```

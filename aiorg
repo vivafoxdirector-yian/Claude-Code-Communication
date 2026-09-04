@@ -608,6 +608,7 @@ aiorg — AI 조직 프레임워크
   ./aiorg launch                       각 pane 에서 claude 기동
   ./aiorg brief                        각 멤버에게 역할·지시서 안내 전달
   ./aiorg status                       조직도 + 각자 상태 + 미확인/진행 현황
+  ./aiorg progress [--assignee X]      진행 중인 일과 각자의 최신 작업 기록
   ./aiorg notify [--watch]             보류된 알림 재시도
   ./aiorg attach [멤버]                 세션/특정 멤버 화면에 붙기
   ./aiorg down                         세션 종료 (기록은 남음)
@@ -670,6 +671,7 @@ main() {
     members)  st members "$@" ;;
     areas)    st areas "$@" ;;
     artifacts) st artifacts "$@" ;;
+    progress) st progress "$@" ;;
     templates) st templates "$@" ;;
     new)      st new "$@" ;;
     whoami)   aiorg_whoami ;;

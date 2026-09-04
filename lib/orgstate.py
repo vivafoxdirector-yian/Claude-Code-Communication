@@ -944,6 +944,39 @@ def cmd_task_list(args):
         print(pad(mark, 5) + pad(t["id"], 13) + pad(t.get("assignee") or "-", 14) + t["title"])
 
 
+def cmd_progress(args):
+    """진행 중인 일과 각자의 최신 기록. "지금 뭐 하고 있나" 를 한 화면에."""
+    ts = [t for t in all_tasks() if t.get("status") in ("in_progress", "review", "blocked")]
+    if args.assignee:
+        ts = [t for t in ts if t.get("assignee") == args.assignee]
+    if not ts:
+        print("진행 중인 태스크가 없습니다.")
+        return
+
+    ts.sort(key=lambda t: t.get("updated_at") or "")
+    for t in ts:
+        mark = STATUS_MARK.get(t["status"], "[?]")
+        print(mark + " " + t["id"] + "  " + t["title"] + "  (" + (t.get("assignee") or "미배정") + ")")
+        # 진짜 진행 기록만 센다. 태스크를 만들 때 자동으로 붙는 "생성" 이나
+        # 상태 전이에 딸린 메모는 "지금 뭐 하고 있나" 에 답해주지 않는다.
+        notes = [
+            h for h in t.get("history", [])
+            if h.get("note") and h.get("note") != "생성" and not h.get("to_status")
+        ]
+        if not notes:
+            print("    기록 없음 — 착수 후 진행 기록이 없습니다 (마지막 갱신 " + (t.get("updated_at") or "?")[:16] + ")")
+        else:
+            for h in notes[-args.lines:]:
+                who = h.get("by") or "?"
+                print("    " + h["at"][5:16].replace("T", " ") + "  " + who + ": " + h["note"])
+        print()
+
+    stale = [t for t in ts if not [h for h in t.get("history", []) if h.get("note")]]
+    if stale:
+        print("기록이 없는 태스크: " + ", ".join(t["id"] for t in stale))
+        print("담당자에게 진행 상황을 물어보세요.")
+
+
 def cmd_task_show(args):
     t = load_task(args.id)
     if args.json:
@@ -1211,6 +1244,11 @@ def build_parser():
 
     s = sub.add_parser("task-tree")
     s.set_defaults(fn=cmd_task_tree)
+
+    s = sub.add_parser("progress")
+    s.add_argument("--assignee")
+    s.add_argument("--lines", type=int, default=3)
+    s.set_defaults(fn=cmd_progress)
 
     s = sub.add_parser("status")
     s.add_argument("--live")
