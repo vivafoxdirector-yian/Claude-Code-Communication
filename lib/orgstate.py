@@ -309,18 +309,36 @@ def cmd_resolve(args):
             "      그 코드를 건드릴 사람이 조직에 없습니다. 멤버의 areas 에 넣거나 영역에서 빼세요."
         )
 
-    # Claude Code 스킬은 세션이 시작한 디렉터리에서 찾는다.
-    # workdir 이 이 저장소 밖이거나 git 워킹트리면 여기 .claude/skills/ 가 보이지 않는다.
-    # 실측: 워킹트리 안에서도 안 보인다 (독립 프로젝트로 인식된다).
+    # Claude Code 스킬을 그 자리에서 볼 수 있는지 본다.
+    #
+    # 실측한 규칙 (claude -p 로 확인):
+    #   ~/.claude/skills/            어디서든 보인다 (사용자 레벨)
+    #   <프로젝트 루트>/.claude/skills/  시작 위치에서 위로 거슬러 올라가 찾는다.
+    #                               하위 디렉터리에서 실행해도 보인다.
+    #   git 워킹트리                 자기 .git 을 가진 별개 프로젝트라 부모 저장소의
+    #                               스킬에 닿지 못한다.
     repo_skills = home() / ".claude" / "skills"
     if repo_skills.is_dir():
         names = sorted(d.name for d in repo_skills.iterdir() if (d / "SKILL.md").exists())
+
+        def sees_skills(start: Path) -> bool:
+            """시작 위치에서 프로젝트 루트까지 올라가며 .claude/skills 를 찾는다."""
+            cur = start
+            while True:
+                if (cur / ".claude" / "skills").is_dir():
+                    return True
+                if (cur / ".git").exists():
+                    return False  # 프로젝트 경계. 더 올라가지 않는다.
+                if cur.parent == cur:
+                    return False
+                cur = cur.parent
+
         blind = []
         for m in members:
             start = Path(m.get("workdir_resolved") or str(wd))
             if m["worktree"]:
                 start = home() / "runtime" / "worktrees" / m["id"]
-            if not (start / ".claude" / "skills").is_dir() and start != home():
+            if not sees_skills(start):
                 blind.append(m["id"])
         if names and blind:
             warnings.append(
