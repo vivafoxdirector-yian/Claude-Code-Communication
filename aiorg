@@ -222,11 +222,18 @@ cmd_brief() {
     instr="$(aiorg_member_field "$id" instruction)"
     # 이 역할이 쓰기로 되어 있는 Claude Code 스킬을 함께 알려준다.
     # 안 알려주면 스킬이 있어도 쓰지 않는다.
-    local useskills msg
+    local useskills msg open_n
     useskills="$(aiorg_member_field "$id" use_skills)"
     msg="당신은 이 조직의 '$id' ($title / 역할 $role) 입니다. org/roles/_protocol.md 와 $instr 를 읽고 규칙을 숙지한 뒤, aiorg inbox 로 수신함을 확인하세요."
     if [[ -n $useskills ]]; then
       msg+=" 이 역할은 다음 스킬을 씁니다: ${useskills// /, }. 해당하는 일을 할 때 그 스킬을 먼저 부르세요. 목록에 없으면 없다고 보고하세요."
+    fi
+    # 하던 일이 있으면 알려준다. 조직을 다시 올린 경우(재부팅 포함) 구성원은
+    # 자기가 무엇을 하던 중이었는지 기억하지 못한다 — 대화 맥락이 사라졌기 때문이다.
+    # 태스크와 진행 기록은 파일로 남아 있으니, 그것부터 읽으라고 짚어준다.
+    open_n="$(st task-list --assignee "$id" --open-only --ids 2>/dev/null | grep -c .)"
+    if [[ ${open_n:-0} -gt 0 ]]; then
+      msg+=" 그리고 당신에게는 이미 진행 중이던 태스크가 ${open_n}건 있습니다. aiorg task list --mine --open 으로 확인하고, aiorg task show <id> 의 이력에서 어디까지 했는지 읽은 뒤 이어서 하세요. 처음부터 다시 하지 마세요."
     fi
     aiorg_ring "$pane" "$msg"
     st event --type member.brief --kv "member=$id" >/dev/null
