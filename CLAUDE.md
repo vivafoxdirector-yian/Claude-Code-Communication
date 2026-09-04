@@ -48,7 +48,7 @@
 ./aiorg areas                   # 코드 영역과 담당자 (기존 제품에 붙였을 때)
 ./aiorg skills [--link]         # 프레임워크 스킬을 어디서든 보이게 연결
 ./aiorg attach [멤버]            # 특정 멤버 화면에 붙기
-./aiorg notify [--watch]        # 보류된 알림 재시도
+./aiorg notify [--watch]        # 보류된 알림 재시도 (up 이 지킴이를 띄워둔다)
 ./aiorg down                    # 세션 종료 (기록은 runtime/ 에 남음)
 ./aiorg clean [--force]         # runtime/ 정리 (무엇을 잃는지 먼저 보여준다)
 ./aiorg log                     # 이벤트 로그

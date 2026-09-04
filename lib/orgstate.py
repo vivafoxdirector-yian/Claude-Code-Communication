@@ -86,6 +86,30 @@ def die(msg: str, code: int = 1):
 
 DEFAULT_ICONS = {"ceo": "\U0001F451", "manager": "\U0001F3AF", "engineer": "\U0001F527", "reviewer": "\U0001F50D"}
 
+# 이모지 글리프가 없는 글꼴에서는 전부 물음표로 찍혀 조직도를 읽을 수 없다.
+# 로케일이 UTF-8 이어도 글꼴 문제라 자동 판별이 안 되므로 환경변수로 끈다.
+#   AIORG_ASCII=1 ./aiorg status
+ASCII_ICONS = {"ceo": "@", "manager": "+", "engineer": "-", "reviewer": "?", "po": "=", "presales": "!"}
+
+
+def ascii_mode() -> bool:
+    v = os.environ.get("AIORG_ASCII", "")
+    if v not in ("", "0", "false", "no"):
+        return True
+    for k in ("LC_ALL", "LC_CTYPE", "LANG"):
+        val = os.environ.get(k)
+        if val:
+            return "utf-8" not in val.lower().replace("utf8", "utf-8")
+    return True
+
+
+def icon_of(m) -> str:
+    """멤버의 표시 기호. ASCII 모드에서는 역할별 한 글자로 바꾼다."""
+    if not ascii_mode():
+        return m.get("icon", "*")
+    return ASCII_ICONS.get(m.get("role", ""), "*")
+
+
 
 def resolved_path() -> Path:
     return runtime() / "org.resolved.json"
@@ -843,7 +867,7 @@ def cmd_inbox(args):
     else:
         me = by_id[args.me]
         label = "전체" if args.all else "미확인"
-        print("=== " + label + " 메시지 " + str(len(picked)) + "건 — " + me["icon"] + " " + args.me + " (" + me["title"] + ") ===")
+        print("=== " + label + " 메시지 " + str(len(picked)) + "건 — " + icon_of(me) + " " + args.me + " (" + me["title"] + ") ===")
         print()
         for i, (_, m) in enumerate(picked, 1):
             print(render_msg(i, m))
@@ -1107,7 +1131,7 @@ def cmd_status(args):
         if active.get(mid):
             flags.append("진행 " + str(active[mid]))
         tail = ("   " + " / ".join(flags)) if flags else ""
-        print(prefix + conn + m["icon"] + " " + pad(mid, 12) + " " + pad(m["title"], 16) + " [" + badges.get(state, state) + "]" + tail)
+        print(prefix + conn + icon_of(m) + " " + pad(mid, 12) + " " + pad(m["title"], 16) + " [" + badges.get(state, state) + "]" + tail)
 
     def walk(mid, prefix, conn, child_prefix):
         line(mid, prefix, conn)

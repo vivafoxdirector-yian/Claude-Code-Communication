@@ -245,6 +245,19 @@ for m in json.load(sys.stdin):
 
   st event --type org.up --kv "source=$orgfile" >/dev/null
 
+  # 알림 지킴이를 함께 띄운다. 사람이 기억해야 하는 것으로 두면 잊고,
+  # 잊으면 조직이 조용히 멈춘다 (전원 '대기' 인데 미확인이 줄지 않는다).
+  if aiorg_notify_running; then
+    info ""
+    info "알림 지킴이: 이미 돌고 있음 ($(aiorg_notify_session))"
+  elif aiorg_notify_start; then
+    info ""
+    info "알림 지킴이 기동 ($(aiorg_notify_session)) — 보류된 벨을 계속 재시도합니다"
+  else
+    info ""
+    info "경고: 알림 지킴이를 띄우지 못했습니다. 별도 터미널에서 ./aiorg notify --watch 를 켜세요."
+  fi
+
   info ""
   if ((launch)); then
     cmd_launch
@@ -385,6 +398,9 @@ cmd_down() {
       info "$sess 종료"
     fi
   done < <(st sessions 2>/dev/null)
+  if aiorg_notify_stop; then
+    info "$(aiorg_notify_session) 종료 (알림 지킴이)"
+  fi
   : >"$(aiorg_panes_file)" 2>/dev/null || true
   st event --type org.down >/dev/null 2>&1 || true
   info "조직 세션을 내렸습니다. 메시지·태스크 기록은 runtime/ 에 남아 있습니다."
@@ -612,6 +628,13 @@ cmd_status() {
     st status --live "$live" "$@"
   else
     st status "$@"
+  fi
+  # 지킴이가 죽어 있으면 보류된 벨이 영원히 안 간다. 상태를 볼 때 알려준다.
+  if [[ -n $live ]] && ! aiorg_notify_running; then
+    info ""
+    info "경고: 알림 지킴이가 돌고 있지 않습니다. 보류된 벨이 전달되지 않습니다."
+    info "      ./aiorg notify        지금 한 번 재시도"
+    info "      ./aiorg up            지킴이까지 다시 띄움 (살아 있는 세션은 그대로)"
   fi
 }
 

@@ -324,6 +324,29 @@ aiorg_session_intact() {
   done
   return 0
 }
+# 알림 지킴이. 상대가 작업 중일 때 보낸 메시지는 벨이 보류되고, 이것이
+# 재시도해 준다. 사람이 별도 터미널에서 켜 두는 것으로 되어 있었는데
+# 잊으면 조직이 조용히 멈춘다 — 전원 '대기' 인데 미확인이 줄지 않는 모습이다.
+# 실제로 그렇게 멈춘 것을 봤으므로 up 이 직접 띄운다.
+aiorg_notify_session() { aiorg_session_name notify; }
+
+aiorg_notify_running() {
+  tmux has-session -t "$(aiorg_notify_session)" 2>/dev/null
+}
+
+aiorg_notify_start() {
+  local sess
+  sess="$(aiorg_notify_session)"
+  aiorg_notify_running && return 0
+  tmux new-session -d -s "$sess" -c "$AIORG_HOME" "'$AIORG_HOME/aiorg' notify --watch" 2>/dev/null || return 1
+  tmux set-environment -t "$sess" AIORG_OWNER "$AIORG_HOME" >/dev/null 2>&1 || true
+  return 0
+}
+
+aiorg_notify_stop() {
+  tmux kill-session -t "$(aiorg_notify_session)" 2>/dev/null
+}
+
 
 aiorg_build_session() {
   local dept="$1" workdir="$2" layout="$3"; shift 3
