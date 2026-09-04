@@ -146,7 +146,14 @@ for m in json.load(sys.stdin):
   # 부족하다는 것을 실제로 확인했다 (구성원이 여기에 코드를 커밋했다).
   aiorg_install_commit_guard
 
-  : >"$(aiorg_panes_file)"
+  # 세션을 다시 세우기 전에 이전 pane 기록을 떠 둔다. 온전히 살아 있는 부서를
+  # 알아보는 데 쓰고, 그 부서의 기록은 그대로 물려준다.
+  local pfile
+  pfile="$(aiorg_panes_file)"
+  AIORG_PANES_PREV="$pfile.prev"
+  export AIORG_PANES_PREV
+  if [[ -f $pfile ]]; then cp "$pfile" "$AIORG_PANES_PREV"; else : >"$AIORG_PANES_PREV"; fi
+  : >"$pfile"
   info ""
   info "tmux 세션 구성 중 (배치: $layout)..."
   local dept ids sess out
@@ -170,6 +177,13 @@ for m in json.load(sys.stdin):
       session_prefix: myproj      # -> myproj-exec, myproj-dev ...
 
   그쪽 조직을 정말 내리려면 그 저장소에서 ./aiorg down 을 실행하세요."
+    fi
+    if [[ $out == REUSE* ]]; then
+      sess="$(cut -f2 <<<"$out")"
+      # 이 부서의 pane 기록을 그대로 물려준다
+      awk -F'\t' -v s="$sess" '$2 == s' "$AIORG_PANES_PREV" >>"$pfile"
+      info "  $sess ← $ids  (살아 있어 그대로 씀)"
+      continue
     fi
     sess="$out"
     info "  $sess ← $ids"
@@ -208,13 +222,21 @@ cmd_launch() {
   # "작업 디렉터리 밖 읽기를 허용하시겠습니까?" 대화상자가 떠서 조직 전체가 멈춘다.
   # --add-dir 로 이 저장소를 읽을 수 있는 곳에 넣어 준다.
   local cmdline="${AIORG_CLAUDE_CMD:-claude --add-dir \"$AIORG_HOME\"}"
-  local id sess pane count=0
+  local id sess pane state count=0 running=""
   [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
   info "claude 기동 중 (명령: $cmdline)..."
   while IFS=$'\t' read -r id sess pane; do
     [[ -n $id ]] || continue
     if ! aiorg_pane_alive "$pane"; then
       info "  $id — pane 없음, 건너뜀"
+      continue
+    fi
+    # 이미 claude 가 돌고 있는 자리에 명령줄을 타이핑하면 그것이 그 구성원에게
+    # 보내는 메시지가 된다. 죽은 자리 하나를 살리려고 launch 를 다시 실행했을 때
+    # 나머지 전원의 대화가 오염되는 것이다. 셸 상태(down)인 자리만 띄운다.
+    state="$(aiorg_member_state "$pane")"
+    if [[ $state != down ]]; then
+      running+=" $id"
       continue
     fi
     tmux send-keys -t "$pane" -l "$cmdline"
@@ -224,16 +246,30 @@ cmd_launch() {
   done <"$(aiorg_panes_file)"
   st event --type org.launch --kv "members=$count" >/dev/null
   info ""
-  info "$count 명 기동. 첫 실행이라면 각 pane 에서 인증을 마쳐야 합니다."
-  info "부팅이 끝나면 ./aiorg brief 로 각자에게 지시서를 읽히세요."
+  if [[ -n $running ]]; then
+    info "이미 떠 있어 건너뜀:$running"
+  fi
+  if [[ $count -eq 0 ]]; then
+    info "새로 띄운 자리가 없습니다. ./aiorg status 로 상태를 확인하세요."
+  else
+    info "$count 명 기동. 첫 실행이라면 각 pane 에서 인증을 마쳐야 합니다."
+    info "부팅이 끝나면 ./aiorg brief 로 각자에게 지시서를 읽히세요."
+  fi
 }
 
 # 각 멤버에게 "너는 누구고 지시서를 읽어라" 는 최초 지시를 넣는다.
 cmd_brief() {
   local id sess pane state title role instr sent=0 skipped=""
   [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
+  # 인자를 주면 그 멤버만. 죽었던 자리 하나를 되살렸을 때, 일하고 있는
+  # 나머지에게 다시 지시서를 들이밀지 않기 위해서다.
+  local only=" $* "
+  [[ -n $* ]] && info "대상: $*"
   while IFS=$'\t' read -r id sess pane; do
     [[ -n $id ]] || continue
+    if [[ $only != "  " && $only != *" $id "* ]]; then
+      continue
+    fi
     state="$(aiorg_member_state "$pane")"
     if [[ $state != idle ]]; then
       skipped+=" $id($state)"
@@ -279,7 +315,9 @@ cmd_brief() {
     info "  prompt = 대화상자가 떠 있습니다. ./aiorg attach <멤버> 로 붙어서 직접 답하세요."
     info "  starting/down = 부팅을 기다렸다가 ./aiorg brief 를 다시 실행하세요."
   else
-    info "이제 대표에게 목표를 지시하세요:  ./aiorg attach $(aiorg_root_member)"
+    if [[ $only == "  " ]]; then
+      info "이제 대표에게 목표를 지시하세요:  ./aiorg attach $(aiorg_root_member)"
+    fi
   fi
 }
 
@@ -867,7 +905,7 @@ aiorg — AI 조직 프레임워크
   ./aiorg new <템플릿> [이름]           템플릿을 org/<이름>.yaml 로 복사
   ./aiorg up [--org 이름|경로] [--launch]  조직도대로 tmux 세션 구성
   ./aiorg launch                       각 pane 에서 claude 기동
-  ./aiorg brief                        각 멤버에게 역할·지시서 안내 전달
+  ./aiorg brief [멤버...]               역할·지시서 안내 전달 (인자 없으면 전원)
   ./aiorg status                       조직도 + 각자 상태 + 미확인/진행 현황
   ./aiorg progress [--assignee X]      진행 중인 일과 각자의 최신 작업 기록
   ./aiorg notify [--watch]             보류된 알림 재시도

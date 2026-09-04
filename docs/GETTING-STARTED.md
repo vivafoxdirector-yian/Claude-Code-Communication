@@ -226,7 +226,17 @@ claude 기동 중 (명령: claude)...
 그냥 Enter 를 누르면 claude 가 종료된다. 화살표로 `Yes, I trust this folder` 로
 옮긴 뒤 Enter 를 누른다. 답했으면 `Ctrl-b d` 로 빠져나온다.
 
-claude 가 꺼진 자리는 `미가동` 으로 잡힌다. 그 pane 에서 `claude` 를 다시 치면 된다.
+claude 가 꺼진 자리는 `미가동` 으로 잡힌다. **그 pane 에서 `claude` 를 직접 치지 않는다** —
+`launch` 는 `--add-dir` 로 지시서를 읽을 수 있게 열어 주는데, 손으로 띄운 자리는 그것이
+빠져서 자기 역할을 못 읽는다. 겉보기엔 정상이라 알아채기 어렵다. 이렇게 되살린다.
+
+```bash
+./aiorg launch          # 셸로 떨어진 자리만 다시 띄운다. 일하는 사람은 건드리지 않는다
+./aiorg brief ceo       # 되살린 자리에만 지시서를 다시 알린다
+```
+
+되살린 구성원은 대화 맥락이 없다. `brief` 가 진행 중이던 태스크를 짚어 주고,
+수신함은 파일로 남아 있으므로 이어서 일한다.
 
 전원이 `대기` 가 되면 다음으로 간다.
 
@@ -481,6 +491,25 @@ aiorg-dev 종료
 **전원이 `미가동` 이다**
 `./aiorg launch` 를 안 했거나 claude 가 뜨다 실패했다. `./aiorg attach <멤버>` 로
 직접 보면 화면에 이유가 있다.
+
+**한 자리가 셸로 떨어져 있다 (`미가동`)**
+그 자리의 claude 가 종료된 것이다. 신뢰 확인 대화상자의 기본 커서가 `No, exit` 에
+있어서 그냥 Enter 를 누르면 이렇게 된다. `exit` 이나 Ctrl-D 를 한 번 더 누르면
+pane 까지 닫히고, 창이 하나뿐인 세션은 세션째로 사라진다.
+
+```bash
+./aiorg launch          # 세션이 살아 있으면 그 자리만 다시 뜬다
+./aiorg brief <멤버>
+```
+
+세션까지 사라졌으면 `./aiorg up --org mycorp` 로 다시 세운다.
+**대화상자를 아예 안 겪는 방법**은 작업 디렉터리를 미리 한 번 신뢰해 두는 것이다.
+
+```bash
+cd <작업 디렉터리> && claude    # ↓ 로 'Yes, I trust this folder' 로 옮기고 Enter, Ctrl-D
+```
+
+Claude Code 가 경로별로 기억하므로 이후 `launch` 는 대화상자 없이 뜬다.
 
 **한 명만 이상하다**
 ```bash

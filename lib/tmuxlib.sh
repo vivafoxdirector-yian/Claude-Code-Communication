@@ -307,6 +307,24 @@ aiorg_member_start_dir() {
 #             창 사이 이동은 Ctrl-b n / p, 목록은 Ctrl-b w.
 #   panes   — 한 창을 격자로 쪼갠다. 부서 전체가 한눈에 보이지만 멤버당 폭이 좁다.
 #             4명이면 한 명당 ~40칸으로, 읽기는 되지만 작업하기는 답답하다.
+# 이 부서 세션이 온전한가. 세션이 살아 있고, 기대하는 멤버 전원이
+# panes.tsv 에 기록된 살아 있는 pane 을 가지고 있어야 한다.
+# 첫 인자는 이전 pane 기록(스냅샷). up 이 panes.tsv 를 비우기 전에 떠 둔 것이다.
+aiorg_session_intact() {
+  local prev="$1" sess="$2"; shift 2
+  local id pane
+  [[ -f $prev ]] || return 1
+  tmux has-session -t "$sess" 2>/dev/null || return 1
+  for id in "$@"; do
+    pane="$(awk -F'\t' -v w="$id" '$1 == w { print $3; exit }' "$prev")"
+    [[ -n $pane ]] || return 1
+    aiorg_pane_alive "$pane" || return 1
+    # 그 pane 이 정말 이 세션 것인지도 본다 (예전 조직의 잔재일 수 있다)
+    [[ "$(tmux display-message -p -t "$pane" '#{session_name}' 2>/dev/null)" == "$sess" ]] || return 1
+  done
+  return 0
+}
+
 aiorg_build_session() {
   local dept="$1" workdir="$2" layout="$3"; shift 3
   local ids=("$@") sess pane i n wd
@@ -325,6 +343,16 @@ aiorg_build_session() {
     if [[ -n $owner && $owner != "$AIORG_HOME" ]]; then
       printf 'CONFLICT\t%s\t%s\n' "$sess" "$owner"
       return 2
+    fi
+    # 우리 것이고 이 부서의 자리가 전부 살아 있으면 손대지 않는다.
+    #
+    # 왜 이렇게 하는가: 창이 하나뿐인 부서는 셸이 끝나면 세션째로 사라진다.
+    # 되살리려면 up 을 다시 해야 하는데, 예전에는 살아 있는 세션까지 전부 죽이고
+    # 새로 만들었다. 한 자리를 잃으면 일하던 조직 전체의 대화 맥락을 잃는 것이다.
+    # 이제 없어진 부서만 다시 세운다.
+    if aiorg_session_intact "${AIORG_PANES_PREV:-/nonexistent}" "$sess" "${ids[@]}"; then
+      printf 'REUSE\t%s\n' "$sess"
+      return 0
     fi
   fi
   tmux kill-session -t "$sess" 2>/dev/null || true
@@ -387,7 +415,10 @@ aiorg_prepare_pane() {
   tmux send-keys -t "$pane" Enter
   tmux send-keys -t "$pane" -l "export PS1='[$id] \$ '"
   tmux send-keys -t "$pane" Enter
-  tmux send-keys -t "$pane" -l "clear; echo \"[aiorg] $id ($role) 준비 완료 — 'claude' 로 세션을 시작하세요\""
+  # 여기서 'claude' 를 직접 치라고 안내하면 안 된다. launch 는 --add-dir 로
+  # 프레임워크 저장소를 함께 열어 주는데, 손으로 띄운 자리는 그것이 빠져서
+  # 역할 지시서를 읽지 못한다 — 겉보기엔 정상이라 알아채기 어렵다.
+  tmux send-keys -t "$pane" -l "clear; echo \"[aiorg] $id ($role) 자리 준비됨 — 운영자 터미널에서 ./aiorg launch 를 실행하세요 (여기서 claude 를 직접 치지 마세요)\""
   tmux send-keys -t "$pane" Enter
 }
 
