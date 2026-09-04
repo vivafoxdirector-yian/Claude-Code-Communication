@@ -53,6 +53,10 @@ claude          # 로그인 상태 확인, 필요하면 /login
 
 ## 시작하기
 
+> 처음이라면 [GETTING-STARTED.md](GETTING-STARTED.md) 를 따라가는 편이 빠르다.
+> `product-team` 으로 조직을 세워 목표를 주고 결과를 받는 과정을 순서대로 적어 두었다.
+> 아래는 요약이다.
+
 ```bash
 ./aiorg templates          # 조직 템플릿 목록
 ./aiorg up --org solo      # 템플릿으로 바로 띄우기 (가장 가벼움)

@@ -20,6 +20,7 @@ cd /mnt/c/git/yian/Claude-Code-Communication
 대표에게 목표를 말하면 부서장에게 쪼개 내려가고, 실무자가 만들고, 결과가 거꾸로 올라온다.
 진행 상황은 다른 터미널에서 `./aiorg status`, `./aiorg task tree` 로 본다.
 
+- **처음 시작한다면**: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) — product-team 으로 처음부터 끝까지
 - **사용법 전체**: `./aiorg help`
 - **설계와 상세 문서**: [docs/AIORG.md](docs/AIORG.md)
 - **조직 템플릿 10종**: [org/templates/](org/templates/) — solo(2) / minimal(4) / startup(5) / product-team(8) / two-po(8) / quality-first(8) / research(5) / research-build(10) / enterprise(14) / **existing-product(8, 기존 제품용)**

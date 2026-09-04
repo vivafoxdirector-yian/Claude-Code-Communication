@@ -16,6 +16,7 @@ cd /path/to/Claude-Code-Communication
 
 **Documentation is in Korean.** Start here:
 
+- [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) — end-to-end walkthrough with `product-team`
 - [docs/AIORG.md](docs/AIORG.md) — design and full reference
 - [org/templates/README.md](org/templates/README.md) — the 10 templates
 - `./aiorg help` — command reference
