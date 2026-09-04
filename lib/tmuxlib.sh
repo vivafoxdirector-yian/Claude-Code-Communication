@@ -281,6 +281,18 @@ aiorg_build_session() {
 
   wd="$(aiorg_member_start_dir "${ids[0]}" "$workdir")"
 
+  # 이 저장소를 복사해 여러 프로젝트를 동시에 돌리는 경우, session_prefix 가 같으면
+  # 세션 이름이 겹친다. 그대로 두면 나중에 뜬 쪽이 먼저 돌던 조직을 죽이고
+  # 이름을 가져간다 — 먼저 쪽은 이유도 모르고 전원 '미가동' 이 된다.
+  # 그래서 세션마다 주인(AIORG_HOME)을 적어두고, 남의 것이면 손대지 않는다.
+  if tmux has-session -t "$sess" 2>/dev/null; then
+    local owner
+    owner="$(tmux show-environment -t "$sess" AIORG_OWNER 2>/dev/null | sed 's/^AIORG_OWNER=//')"
+    if [[ -n $owner && $owner != "$AIORG_HOME" ]]; then
+      printf 'CONFLICT\t%s\t%s\n' "$sess" "$owner"
+      return 2
+    fi
+  fi
   tmux kill-session -t "$sess" 2>/dev/null || true
 
   # 첫 자리. -P -F 로 생성된 pane ID 를 그 자리에서 받는다.
@@ -290,6 +302,8 @@ aiorg_build_session() {
   # 나중에 되짚을 수 없다 — 실제로 조사 결과의 출처를 확인하려다 이력이
   # 이미 잘려나가 확인하지 못한 적이 있다.
   tmux set-option -t "$sess" history-limit 50000 >/dev/null 2>&1 || true
+  # 이 세션이 어느 저장소 것인지 적어둔다. 복사본이 남의 세션을 죽이지 않게 하는 표식이다.
+  tmux set-environment -t "$sess" AIORG_OWNER "$AIORG_HOME" >/dev/null 2>&1 || true
   aiorg_pane_record "${ids[0]}" "$sess" "$pane"
   aiorg_prepare_pane "$pane" "${ids[0]}" "$wd"
 

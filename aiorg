@@ -145,11 +145,29 @@ for m in json.load(sys.stdin):
   : >"$(aiorg_panes_file)"
   info ""
   info "tmux 세션 구성 중 (배치: $layout)..."
-  local dept ids sess
+  local dept ids sess out
   while IFS=$'\t' read -r dept ids; do
     [[ -n $dept ]] || continue
     # shellcheck disable=SC2086
-    sess="$(aiorg_build_session "$dept" "$workdir" "$layout" $ids)"
+    out="$(aiorg_build_session "$dept" "$workdir" "$layout" $ids)"
+    if [[ $out == CONFLICT* ]]; then
+      local csess cowner
+      csess="$(cut -f2 <<<"$out")"
+      cowner="$(cut -f3 <<<"$out")"
+      die "tmux 세션 '$csess' 은 다른 저장소가 쓰고 있습니다.
+  주인: $cowner
+  나  : $AIORG_HOME
+
+  이 저장소를 복사해 여러 프로젝트를 동시에 돌리는 경우입니다.
+  세션 이름이 겹치면 나중에 뜬 쪽이 먼저 돌던 조직을 죽입니다.
+
+  조직도의 org.session_prefix 를 프로젝트마다 다르게 바꾸세요:
+    org:
+      session_prefix: myproj      # -> myproj-exec, myproj-dev ...
+
+  그쪽 조직을 정말 내리려면 그 저장소에서 ./aiorg down 을 실행하세요."
+    fi
+    sess="$out"
     info "  $sess ← $ids"
   done < <(st sessions)
 

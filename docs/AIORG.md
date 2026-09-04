@@ -422,6 +422,56 @@ roles:
 
 전체 목록과 좋은 예·나쁜 예는 [org/roles/po.md](../org/roles/po.md) 에 있다.
 
+### 프로젝트를 여러 개 돌리기 — 저장소를 복사한다
+
+제품마다 조직을 따로 두려면 **이 저장소를 복사해 이름을 바꿔 쓰면 된다.**
+`aiorg` 는 자기 위치를 스크립트 경로에서 알아내므로 어디에 두어도 독립적으로 돈다.
+`runtime/`, `worktrees/`, 조직도, 권한 설정이 모두 복사본 안에 갇힌다.
+
+```bash
+cp -r Claude-Code-Communication ~/aiorg-projA
+cd ~/aiorg-projA
+rm -rf runtime worktrees        # 원본의 조직 상태는 가져가지 않는다
+```
+
+**딱 하나 반드시 고쳐야 하는 것이 있다 — `session_prefix`.**
+
+```yaml
+org:
+  session_prefix: projA # -> projA-exec, projA-dev ...
+```
+
+기본값이 `aiorg` 라서, 그대로 두면 두 복사본이 같은 tmux 세션 이름을 쓴다.
+그러면 **나중에 뜬 쪽이 먼저 돌던 조직을 죽이고 이름을 가져간다.**
+먼저 쪽은 이유도 모른 채 전원 `미가동` 이 된다.
+
+그래서 `up` 이 이걸 막는다. 세션마다 주인(`AIORG_HOME`)을 적어두고,
+남의 것이면 손대지 않고 거부한다:
+
+```
+aiorg: tmux 세션 'aiorg-org' 은 다른 저장소가 쓰고 있습니다.
+  주인: /mnt/c/git/yian/Claude-Code-Communication
+  나  : /tmp/aiorg-copy
+
+  조직도의 org.session_prefix 를 프로젝트마다 다르게 바꾸세요
+```
+
+`session_prefix` 를 다르게 하면 두 조직이 나란히 돈다.
+
+```
+aiorg-org:  4 windows      # 프로젝트 A
+myproj-org: 4 windows      # 프로젝트 B
+```
+
+### 복사 대신 조직도만 여러 개 두면?
+
+한 저장소에 `org/projA.yaml`, `org/projB.yaml` 을 두고 `--org` 로 바꿔 쓰는 방법도 있다.
+**동시에 돌리지 않고 번갈아 쓸 때만** 그렇게 한다.
+
+`runtime/` 이 하나이기 때문이다 — 두 프로젝트의 태스크와 메시지가 섞이고,
+조직을 바꿀 때마다 "이전 조직의 미완료 태스크" 경고가 뜬다.
+**동시에 돌릴 거면 저장소를 복사하는 편이 깔끔하다.**
+
 ### 조직 템플릿
 
 `org/templates/` 에 서로 구조가 다른 10종이 있다. 자세한 안내는
