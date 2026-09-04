@@ -291,6 +291,66 @@ cmd_down() {
   fi
 }
 
+# 제품 저장소에 산출물 구조를 깔아준다.
+#
+# 이 저장소는 프레임워크다. 산출물이 놓일 자리는 제품 저장소 것이므로 여기에
+# 빈 디렉터리를 들고 있지 않는다. 대신 필요할 때 workdir 에 만들어 준다.
+cmd_scaffold() {
+  local workdir
+  workdir="$(aiorg_org_field workdir)"
+  [[ -n $workdir ]] || die "먼저 ./aiorg up 을 실행하세요 (조직도를 읽어야 workdir 을 압니다)."
+  [[ $workdir == /* ]] || workdir="$AIORG_HOME/${workdir#./}"
+  [[ -d $workdir ]] || die "작업 디렉터리가 없습니다: $workdir"
+  # workdir: "." 이면 "$AIORG_HOME/." 이 되어 문자열 비교로는 안 걸린다.
+  # 경로를 정규화해서 비교한다.
+  workdir="$(cd -- "$workdir" && pwd)"
+
+  if [[ $workdir == "$AIORG_HOME" ]]; then
+    die "작업 디렉터리가 이 프레임워크 저장소입니다.
+  산출물 자리는 제품 저장소에 만드는 것입니다. 조직도의 org.workdir 을 먼저 바꾸세요."
+  fi
+
+  info "산출물 구조를 만듭니다: $workdir"
+  local made=0 d
+  # 역할 지시서가 쓰는 자리 + 조직도의 artifacts 자리
+  local -a dirs=(docs/voc/raw docs/voc/digest docs/product/specs docs/product/research)
+  while IFS= read -r d; do
+    [[ -n $d ]] && dirs+=("${d%/}")
+  done < <(st artifacts --json 2>/dev/null | "$AIORG_PY" -c '
+import json, sys
+try:
+    for a in json.load(sys.stdin).values():
+        print(a["path"])
+except Exception:
+    pass
+')
+
+  for d in "${dirs[@]}"; do
+    if [[ ! -d "$workdir/$d" ]]; then
+      mkdir -p "$workdir/$d" && info "  만듦   $d/" && made=$((made + 1))
+    else
+      info "  있음   $d/"
+    fi
+  done
+
+  # VOC 안내는 사람이 읽어야 하는 것이므로 제품 저장소에 복사해 둔다.
+  if [[ ! -f "$workdir/docs/voc/README.md" ]]; then
+    cp "$AIORG_HOME/docs/voc/README.md" "$workdir/docs/voc/README.md" 2>/dev/null &&
+      info "  만듦   docs/voc/README.md  (고객 발언 원문을 넣는 법)"
+  fi
+  if [[ ! -f "$workdir/docs/voc/routed.md" ]]; then
+    printf '%s
+' "# VOC 전달 대장" ""       "프리세일즈가 관리한다. 같은 VOC 를 두 번 전달하지 않기 위한 기록이다." ""       "| 날짜 | VOC | 출처(raw) | 전달처 | 결과 |" "|---|---|---|---|---|"       >"$workdir/docs/voc/routed.md" && info "  만듦   docs/voc/routed.md"
+  fi
+
+  info ""
+  if ((made)); then
+    info "제품 저장소에 자리를 만들었습니다. 고객 발언 원문은 docs/voc/raw/ 에 넣으세요."
+  else
+    info "이미 다 있습니다."
+  fi
+}
+
 # runtime/ 을 정리한다. 손으로 rm -rf 하게 두면 사고가 나기 때문에 명령으로 감싼다.
 cmd_clean() {
   local force=0
@@ -718,6 +778,7 @@ aiorg — AI 조직 프레임워크
   ./aiorg members [--skill X] [--ids] 전원의 담당/역량 (배정 상대 고를 때)
   ./aiorg areas                        코드 영역과 담당자 (기존 제품에 붙였을 때)
   ./aiorg artifacts                    산출물 자리 (설계·ADR·테스트계획 등)
+  ./aiorg scaffold                     제품 저장소에 산출물 디렉터리를 만든다
   ./aiorg task list [--mine] [--open]  태스크 목록
   ./aiorg task start|done|block|review|cancel <id> [--note "..."]
   ./aiorg task show <id> / tree
@@ -765,6 +826,7 @@ main() {
     artifacts) st artifacts "$@" ;;
     progress) st progress "$@" ;;
     clean)    cmd_clean "$@" ;;
+    scaffold) cmd_scaffold "$@" ;;
     templates) st templates "$@" ;;
     new)      st new "$@" ;;
     whoami)   aiorg_whoami ;;
