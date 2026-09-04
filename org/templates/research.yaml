@@ -1,0 +1,103 @@
+# 조사·기획 전용 — 개발자가 없다.
+#
+# 산출물이 코드가 아니라 문서인 조직이다.
+# 시장 조사, 요구사항 정의, 경쟁 분석, 제안서까지만 하고 구현은 하지 않는다.
+# PO 가 셋 이상일 때 기획팀장을 두는 형태를 보여준다 —
+# PO 들은 팀장에게 보고하고, 팀장이 종합해 대표에게 올린다.
+#
+#   ./aiorg up --org research
+
+version: 1
+
+org:
+  name: "AI Org (research)"
+  description: "코드를 쓰지 않는 조사·기획 조직. 산출물은 문서."
+  workdir: "."
+  session_prefix: aiorg
+  layout: windows
+
+roles:
+  ceo:
+    instruction: org/roles/ceo.md
+    icon: "\U0001F451"
+    color: magenta
+    can_assign: true
+
+  manager:
+    instruction: org/roles/manager.md
+    icon: "\U0001F3AF"
+    color: red
+    can_assign: true
+
+  engineer:
+    instruction: org/roles/engineer.md
+    icon: "\U0001F527"
+    color: blue
+    can_assign: false
+
+  reviewer:
+    instruction: org/roles/reviewer.md
+    icon: "\U0001F50D"
+    color: cyan
+    can_assign: false
+
+  # 기획(PO) — 무엇을 만들지 판단해 대표에게 제안한다.
+  # can_assign 이 false 인 것이 이 역할의 핵심이다. PO 는 개발팀에 지휘권이 없다.
+  # 제안만 하고, 채택과 배정은 대표가 한다. 실제 회사의 PO 와 같다.
+  po:
+    instruction: org/roles/po.md
+    icon: "\U0001F4CB"
+    color: yellow
+    can_assign: false
+    # PO 의 skills 는 기술 역량이 아니라 담당 제품 영역이다.
+    # 엔지니어 둘이 python 을 함께 하는 건 정상이지만, PO 둘이 같은 영역을 들면
+    # 같은 기능을 다르게 기획하게 되고 개발팀은 어느 쪽을 만들지 알 수 없다.
+    # 이 값을 켜두면 up 이 겹침을 잡아 경고한다.
+    exclusive_skills: true
+
+  # 프리세일즈 — 제품과 고객 사이를 양방향으로 나른다.
+  # 밖으로: 영업 자료. 안으로: VOC(고객의 목소리).
+  # PO 와 마찬가지로 지휘권이 없다. VOC 는 입력이지 결정이 아니다.
+  # skills 는 담당 고객군이므로 겹치면 경고한다.
+  presales:
+    instruction: org/roles/presales.md
+    icon: "\U0001F4E3"
+    color: green
+    can_assign: false
+    exclusive_skills: true
+
+
+members:
+  - id: ceo
+    title: "대표"
+    role: ceo
+    session: exec
+
+  # ---- 기획부 ----
+  # PO 가 셋 이상이면 위에 팀장을 둔다. 제안이 대표에게 직접 쏟아지는 것을 막는다.
+  - id: po-lead
+    title: "기획팀장"
+    role: manager
+    reports_to: ceo
+    session: product
+
+  - id: po-market
+    title: "제품 책임자 (시장)"
+    role: po
+    reports_to: po-lead
+    session: product
+    skills: [시장조사, 경쟁분석, 가격]
+
+  - id: po-product
+    title: "제품 책임자 (기능)"
+    role: po
+    reports_to: po-lead
+    session: product
+    skills: [기능정의, 사용자경험, 로드맵]
+
+  - id: presales
+    title: "프리세일즈"
+    role: presales
+    reports_to: ceo
+    session: biz
+    skills: [고객전반]

@@ -1,0 +1,9 @@
+# 이 프레임워크는 WSL 안에서 실행된다. 줄바꿈이 CRLF 로 바뀌면
+# 셸 스크립트의 shebang 이 "#!/usr/bin/env bash\r" 가 되어 실행 자체가 실패한다.
+# Windows 에서 clone 해도 LF 로 유지되도록 못박는다.
+*           text=auto eol=lf
+aiorg       text eol=lf
+*.sh        text eol=lf
+*.py        text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf

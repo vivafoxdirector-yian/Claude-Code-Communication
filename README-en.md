@@ -1,3 +1,36 @@
+# 🏢 aiorg — AI Organization Framework
+
+Declare an org chart in YAML; aiorg stands up one independent Claude Code session
+(tmux) per member and routes instructions, reports and tasks between them through
+a file-backed queue.
+
+```bash
+wsl                                    # on Windows, run inside WSL
+cd /path/to/Claude-Code-Communication
+./aiorg doctor                         # environment check
+./aiorg templates                      # 10 org templates
+./aiorg up --org solo                  # smallest one (2 members)
+./aiorg launch && ./aiorg brief
+./aiorg attach ceo                     # you talk only to the CEO
+```
+
+**Documentation is in Korean.** Start here:
+
+- [docs/AIORG.md](docs/AIORG.md) — design and full reference
+- [org/templates/README.md](org/templates/README.md) — the 10 templates
+- `./aiorg help` — command reference
+
+Members are all Claude sessions; a human talks only to the top member (CEO).
+Everything the org needs — roles, reporting lines, code areas, working
+directories — lives in one YAML file.
+
+---
+
+## Below is the predecessor demo
+
+The original `setup.sh` / `agent-send.sh` / `instructions/` tmux demo, kept for
+reference. It has been superseded by aiorg and is no longer maintained.
+
 # 🤖 Tmux Multi-Agent Communication Demo
 
 A demo system for agent-to-agent communication in a tmux environment.

@@ -1,0 +1,668 @@
+#!/usr/bin/env bash
+#
+# aiorg — AI 조직 프레임워크 CLI
+#
+# 조직도를 YAML 로 선언하면 그대로 tmux 세션 조직을 세우고,
+# 멤버(독립 Claude Code 세션) 사이의 지시·보고·태스크를 관리한다.
+#
+#   ./aiorg up                 조직 구성
+#   ./aiorg status             현황판
+#   ./aiorg assign dev-1 "..."  태스크 배정 + 지시 전달  (관리자용)
+#   ./aiorg inbox              내 수신함 확인            (전원)
+#   ./aiorg report "..."       상급자에게 보고           (실무자용)
+#
+set -uo pipefail
+
+AIORG_HOME="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export AIORG_HOME
+AIORG_PY="${AIORG_PY:-python3}"
+export AIORG_PY
+STATE="$AIORG_HOME/lib/orgstate.py"
+
+# 기본 조직도. AIORG_ORG 로 덮을 수 있다.
+# 내가 만든 org/default.yaml 이 있으면 그것을 쓰고, 없으면 표준 템플릿으로 뜬다.
+# 템플릿을 직접 고치는 대신 `./aiorg new` 로 복사해 쓰라는 뜻이다 —
+# 그래야 프레임워크를 갱신해도 내 조직도가 덮이지 않는다.
+if [[ -n ${AIORG_ORG:-} ]]; then
+  DEFAULT_ORG="$AIORG_ORG"
+elif [[ -f "$AIORG_HOME/org/default.yaml" ]]; then
+  DEFAULT_ORG="org/default.yaml"
+else
+  DEFAULT_ORG="org/templates/product-team.yaml"
+fi
+
+# shellcheck source=lib/tmuxlib.sh
+source "$AIORG_HOME/lib/tmuxlib.sh"
+
+die() { printf 'aiorg: %s\n' "$*" >&2; exit 1; }
+info() { printf '%s\n' "$*"; }
+st() { "$AIORG_PY" "$STATE" "$@"; }
+
+# ---------------------------------------------------------------- 신원 확인
+
+# 나는 누구인가. AIORG_ME 가 우선, 없으면 현재 tmux pane 으로 역추적.
+aiorg_whoami() {
+  if [[ -n ${AIORG_ME:-} ]]; then
+    printf '%s\n' "$AIORG_ME"
+    return 0
+  fi
+  local f
+  f="$(aiorg_panes_file)"
+  if [[ -n ${TMUX_PANE:-} && -f $f ]]; then
+    awk -F'\t' -v want="$TMUX_PANE" '$3 == want { print $1; exit }' "$f"
+  fi
+}
+
+require_me() {
+  local me
+  me="$(aiorg_whoami)"
+  [[ -n $me ]] || die "발신자를 알 수 없습니다. AIORG_ME 환경변수를 설정하거나 --from 으로 지정하세요."
+  printf '%s\n' "$me"
+}
+
+# ---------------------------------------------------------------- 전달
+
+# 수신자에게 벨을 울린다. idle 이 아니면 보류하고 1을 반환.
+deliver_bell() {
+  local to="$1" pane state n
+  pane="$(aiorg_pane_of "$to")"
+  state="$(aiorg_member_state "$pane")"
+  if [[ $state != idle ]]; then
+    return 1
+  fi
+  n="$(st unread-count --me "$to")"
+  aiorg_ring "$pane" "[aiorg] 새 메시지 ${n}건이 도착했습니다. aiorg inbox 로 확인하고 지시서에 따라 처리하세요." || return 1
+  return 0
+}
+
+# 메시지 하나를 만들고 벨까지 시도. 메시지 id 를 표준출력으로.
+send_one() {
+  local from="$1" to="$2" type="$3" subject="$4" bodyfile="$5" task="$6" replyto="$7"
+  local args=(msg-new --from "$from" --to "$to" --type "$type" --body-file "$bodyfile")
+  [[ -n $subject ]] && args+=(--subject "$subject")
+  [[ -n $task ]] && args+=(--task "$task")
+  [[ -n $replyto ]] && args+=(--reply-to "$replyto")
+
+  local mid
+  mid="$(st "${args[@]}")" || return 1
+
+  if deliver_bell "$to"; then
+    st msg-mark --id "$mid" --state notified >/dev/null
+    printf '%s\t%s\t%s\n' "$to" "$mid" "전달"
+  else
+    printf '%s\t%s\t%s\n' "$to" "$mid" "대기(수신자 작업중 또는 미가동 — ./aiorg notify 로 재시도)"
+  fi
+}
+
+# ---------------------------------------------------------------- 서브커맨드
+
+cmd_up() {
+  local orgfile="$DEFAULT_ORG" launch=0
+  while (($#)); do
+    case "$1" in
+      --org) orgfile="$2"; shift 2 ;;
+      --launch) launch=1; shift ;;
+      *) die "up: 알 수 없는 옵션 '$1'" ;;
+    esac
+  done
+
+  command -v tmux >/dev/null || die "tmux 를 찾을 수 없습니다. WSL 안에서 실행하고 있는지 확인하세요."
+
+  st resolve "$orgfile" || exit 1
+
+  local workdir layout
+  workdir="$(aiorg_org_field workdir)"
+  [[ $workdir == /* ]] || workdir="$AIORG_HOME/${workdir#./}"
+  layout="$(aiorg_org_field layout)"
+  [[ -n $layout ]] || layout=windows
+
+  # 워킹트리를 쓰는 멤버가 있으면 먼저 만든다.
+  # 같은 디렉터리를 공유하면 git checkout 이 서로를 짓밟기 때문이다.
+  local -a wt_members=()
+  mapfile -t wt_members < <(st members --json | "$AIORG_PY" -c '
+import json, sys
+for m in json.load(sys.stdin):
+    if m.get("worktree"):
+        print(m["id"])
+')
+  if ((${#wt_members[@]})); then
+    if ! git -C "$workdir" rev-parse --git-dir >/dev/null 2>&1; then
+      die "워킹트리를 쓰려면 작업 디렉터리가 git 저장소여야 합니다: $workdir
+  members[].worktree 를 끄거나, 그 디렉터리에서 git init 을 하세요."
+    fi
+    info ""
+    info "git 워킹트리 준비 중..."
+    local wid wtpath
+    for wid in "${wt_members[@]}"; do
+      if wtpath="$(aiorg_ensure_worktree "$workdir" "$wid")"; then
+        info "  $wid -> $wtpath  (브랜치 aiorg/$wid)"
+      else
+        die "$wid 의 워킹트리를 만들지 못했습니다. git -C '$workdir' worktree list 로 확인하세요."
+      fi
+    done
+  fi
+
+  : >"$(aiorg_panes_file)"
+  info ""
+  info "tmux 세션 구성 중 (배치: $layout)..."
+  local dept ids sess
+  while IFS=$'\t' read -r dept ids; do
+    [[ -n $dept ]] || continue
+    # shellcheck disable=SC2086
+    sess="$(aiorg_build_session "$dept" "$workdir" "$layout" $ids)"
+    info "  $sess ← $ids"
+  done < <(st sessions)
+
+  st event --type org.up --kv "source=$orgfile" >/dev/null
+
+  info ""
+  if ((launch)); then
+    cmd_launch
+  else
+    info "다음 순서:"
+    info "  ./aiorg launch          각 자리에서 claude 기동"
+    info "  ./aiorg status          전원이 '대기' 가 될 때까지 확인"
+    info "  ./aiorg brief           각자에게 역할·지시서 안내"
+    info "  ./aiorg attach $(aiorg_root_member)    대표 화면에 붙어 목표를 지시"
+  fi
+}
+
+# 최상위 멤버 id (사용자가 대화할 상대).
+aiorg_root_member() {
+  "$AIORG_PY" - <<'PY'
+import json, os
+p = os.path.join(os.environ["AIORG_HOME"], "runtime", "org.resolved.json")
+try:
+    with open(p, encoding="utf-8") as f:
+        print(json.load(f)["roots"][0])
+except Exception:
+    print("ceo")
+PY
+}
+
+cmd_launch() {
+  local cmdline="${AIORG_CLAUDE_CMD:-claude}"
+  local id sess pane count=0
+  [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
+  info "claude 기동 중 (명령: $cmdline)..."
+  while IFS=$'\t' read -r id sess pane; do
+    [[ -n $id ]] || continue
+    if ! aiorg_pane_alive "$pane"; then
+      info "  $id — pane 없음, 건너뜀"
+      continue
+    fi
+    tmux send-keys -t "$pane" -l "$cmdline"
+    tmux send-keys -t "$pane" Enter
+    info "  $id 기동"
+    count=$((count + 1))
+  done <"$(aiorg_panes_file)"
+  st event --type org.launch --kv "members=$count" >/dev/null
+  info ""
+  info "$count 명 기동. 첫 실행이라면 각 pane 에서 인증을 마쳐야 합니다."
+  info "부팅이 끝나면 ./aiorg brief 로 각자에게 지시서를 읽히세요."
+}
+
+# 각 멤버에게 "너는 누구고 지시서를 읽어라" 는 최초 지시를 넣는다.
+cmd_brief() {
+  local id sess pane state title role instr sent=0 skipped=""
+  [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
+  while IFS=$'\t' read -r id sess pane; do
+    [[ -n $id ]] || continue
+    state="$(aiorg_member_state "$pane")"
+    if [[ $state != idle ]]; then
+      skipped+=" $id($state)"
+      continue
+    fi
+    title="$(aiorg_member_field "$id" title)"
+    role="$(aiorg_member_field "$id" role)"
+    instr="$(aiorg_member_field "$id" instruction)"
+    aiorg_ring "$pane" "당신은 이 조직의 '$id' ($title / 역할 $role) 입니다. org/roles/_protocol.md 와 $instr 를 읽고 규칙을 숙지한 뒤, aiorg inbox 로 수신함을 확인하세요."
+    st event --type member.brief --kv "member=$id" >/dev/null
+    info "  $id 지시서 안내 전달"
+    sent=$((sent + 1))
+  done <"$(aiorg_panes_file)"
+  info ""
+  info "$sent 명에게 전달."
+  if [[ -n $skipped ]]; then
+    info "건너뜀:$skipped"
+    info "  prompt = 대화상자가 떠 있습니다. ./aiorg attach <멤버> 로 붙어서 직접 답하세요."
+    info "  starting/down = 부팅을 기다렸다가 ./aiorg brief 를 다시 실행하세요."
+  else
+    info "이제 대표에게 목표를 지시하세요:  ./aiorg attach $(aiorg_root_member)"
+  fi
+}
+
+cmd_down() {
+  local dept
+  while IFS=$'\t' read -r dept _; do
+    [[ -n $dept ]] || continue
+    local sess
+    sess="$(aiorg_session_name "$dept")"
+    if tmux kill-session -t "$sess" 2>/dev/null; then
+      info "$sess 종료"
+    fi
+  done < <(st sessions 2>/dev/null)
+  : >"$(aiorg_panes_file)" 2>/dev/null || true
+  st event --type org.down >/dev/null 2>&1 || true
+  info "조직 세션을 내렸습니다. 메시지·태스크 기록은 runtime/ 에 남아 있습니다."
+  if [[ -d "$(aiorg_worktree_root)" ]] && compgen -G "$(aiorg_worktree_root)/*" >/dev/null; then
+    info ""
+    info "git 워킹트리는 그대로 둡니다 (커밋 안 한 작업이 있을 수 있습니다):"
+    info "  $(aiorg_worktree_root)/"
+    info "정리하려면 각 브랜치를 병합·확인한 뒤:"
+    info "  git -C <제품저장소> worktree remove <경로>   (또는 worktree prune)"
+  fi
+}
+
+cmd_status() {
+  local live=""
+  if [[ -f "$(aiorg_panes_file)" && -s "$(aiorg_panes_file)" ]]; then
+    live="$(aiorg_write_live)"
+  fi
+  if [[ -n $live ]]; then
+    st status --live "$live" "$@"
+  else
+    st status "$@"
+  fi
+}
+
+cmd_send() {
+  local from="" type="info" subject="" task="" replyto="" selector="" bodyfile=""
+  local -a words=()
+  while (($#)); do
+    case "$1" in
+      --from) from="$2"; shift 2 ;;
+      --type|-t) type="$2"; shift 2 ;;
+      --subject|-s) subject="$2"; shift 2 ;;
+      --task) task="$2"; shift 2 ;;
+      --reply-to) replyto="$2"; shift 2 ;;
+      --file|-f) bodyfile="$2"; shift 2 ;;
+      --) shift; words+=("$@"); break ;;
+      -) words+=("$1"); shift ;;   # 홀로 쓰인 '-' 는 "본문은 표준입력" 표시
+      -*) die "send: 알 수 없는 옵션 '$1'" ;;
+      *) if [[ -z $selector ]]; then selector="$1"; else words+=("$1"); fi; shift ;;
+    esac
+  done
+
+  [[ -n $selector ]] || die "받는 사람을 지정하세요.  예: ./aiorg send dev-1 \"작업 시작하세요\""
+  [[ -n $from ]] || from="$(require_me)" || exit 1
+
+  # RETURN 트랩은 쓰지 않는다. 트랩이 등록된 채로 남아 호출한 함수가 반환할 때
+  # 한 번 더 발동하고, 그때는 $tmp 가 이미 스코프 밖이라 set -u 에 걸린다.
+  local tmp
+  tmp="$(mktemp)"
+  if [[ -n $bodyfile ]]; then
+    if [[ ! -f $bodyfile ]]; then rm -f "$tmp"; die "본문 파일이 없습니다: $bodyfile"; fi
+    cat "$bodyfile" >"$tmp"
+  elif ((${#words[@]} == 0)) || [[ ${words[0]:-} == - ]]; then
+    cat >"$tmp"        # 표준입력에서 여러 줄 본문
+  else
+    printf '%s\n' "${words[*]}" >"$tmp"
+  fi
+
+  # 프로세스 치환은 종료코드를 물어오지 않는다. expand 가 실패하면 목록이
+  # 비어서 돌아오므로, 그걸로 판단한다. 실패 이유는 expand 가 이미 stderr 에
+  # 적어놨으니 여기서 또 떠들지 않는다.
+  local -a targets=()
+  mapfile -t targets < <(st expand "$selector" --me "$from" --exclude-me)
+  if ((${#targets[@]} == 0)); then
+    rm -f "$tmp"; exit 1
+  fi
+
+  local to
+  for to in "${targets[@]}"; do
+    send_one "$from" "$to" "$type" "$subject" "$tmp" "$task" "$replyto"
+  done
+  rm -f "$tmp"
+}
+
+cmd_reply() {
+  local mid="${1:-}"; shift || true
+  [[ -n $mid ]] || die "답신할 메시지 id 를 지정하세요.  예: ./aiorg reply msg_ab12cd34 \"확인했습니다\""
+  local orig
+  orig="$(st inbox --me "$(require_me)" --all --peek --json | "$AIORG_PY" -c '
+import json, sys
+mid = sys.argv[1]
+for m in json.load(sys.stdin):
+    if m["id"] == mid:
+        print(m["from"]); break
+else:
+    print("")
+' "$mid")"
+  [[ -n $orig ]] || die "내 수신함에서 '$mid' 를 찾을 수 없습니다."
+  cmd_send "$orig" --type answer --reply-to "$mid" "$@"
+}
+
+# 관리자용: 태스크를 만들고 지시까지 한 번에.
+cmd_assign() {
+  local to="" title="" detail="" parent="" branch=""
+  while (($#)); do
+    case "$1" in
+      --detail|-d) detail="$2"; shift 2 ;;
+      --parent|-p) parent="$2"; shift 2 ;;
+      --branch|-b) branch="$2"; shift 2 ;;
+      -*) die "assign: 알 수 없는 옵션 '$1'" ;;
+      *) if [[ -z $to ]]; then to="$1"; elif [[ -z $title ]]; then title="$1"; else title="$title $1"; fi; shift ;;
+    esac
+  done
+  [[ -n $to && -n $title ]] || die "사용법: ./aiorg assign <담당자> \"<제목>\" [--detail \"상세\"] [--parent <상위태스크>]"
+
+  local me
+  me="$(require_me)" || exit 1
+
+  # 조직도의 can_assign 을 실제로 강제한다. 지시서에 "제안만 한다" 고 적어두는
+  # 것만으로는 부족하다 — 규칙은 지켜질 수도 안 지켜질 수도 있지만, 여기서
+  # 막으면 못 한다. PO 처럼 지휘권 없는 역할이 이 경로로 새는 것을 끊는다.
+  if [[ "$(aiorg_member_field "$me" can_assign)" != "True" ]]; then
+    local myrole
+    myrole="$(aiorg_member_field "$me" role)"
+    die "$me ($myrole) 에게는 배정 권한이 없습니다.
+  이 역할은 남에게 일을 시킬 수 없습니다. 필요한 일은 상급자에게 올리세요:
+    ./aiorg report \"$title\"
+  조직도에서 권한을 주려면 roles.$myrole.can_assign 을 true 로 바꿉니다."
+  fi
+
+  local -a targets=()
+  mapfile -t targets < <(st expand "$to" --me "$me" --exclude-me) || exit 1
+
+  local one tid tmp
+  for one in "${targets[@]}"; do
+    local -a targs=(task-new --title "$title" --assigner "$me" --assignee "$one")
+    [[ -n $detail ]] && targs+=(--detail "$detail")
+    [[ -n $parent ]] && targs+=(--parent "$parent")
+    [[ -n $branch ]] && targs+=(--branch "$branch")
+    tid="$(st "${targs[@]}")" || exit 1
+
+    tmp="$(mktemp)"
+    {
+      printf '태스크 %s 를 배정합니다.\n\n' "$tid"
+      printf '제목: %s\n' "$title"
+      [[ -n $detail ]] && printf '\n상세:\n%s\n' "$detail"
+      [[ -n $branch ]] && printf '\n작업 브랜치: %s\n' "$branch"
+      printf '\n착수할 때  : ./aiorg task start %s\n' "$tid"
+      printf '완료했을 때: ./aiorg task done %s --note "무엇을 했는지"\n' "$tid"
+      printf '막혔을 때  : ./aiorg task block %s --note "무엇에 막혔는지"\n' "$tid"
+      printf '보고할 때  : ./aiorg report --task %s "결과 요약"\n' "$tid"
+    } >"$tmp"
+
+    send_one "$me" "$one" "directive" "[배정] $title" "$tmp" "$tid" ""
+    rm -f "$tmp"
+    printf '  태스크 %s → %s\n' "$tid" "$one"
+  done
+}
+
+# 실무자용: 상급자에게 보고.
+cmd_report() {
+  local task="" subject=""
+  local -a words=()
+  while (($#)); do
+    case "$1" in
+      --task) task="$2"; shift 2 ;;
+      --subject|-s) subject="$2"; shift 2 ;;
+      -) words+=("$1"); shift ;;   # 홀로 쓰인 '-' 는 "본문은 표준입력" 표시
+      -*) die "report: 알 수 없는 옵션 '$1'" ;;
+      *) words+=("$1"); shift ;;
+    esac
+  done
+  local me
+  me="$(require_me)" || exit 1
+  # 최상위 멤버는 상급자가 없다. expand 의 기계적인 오류 대신 사정을 설명한다.
+  local boss
+  boss="$(st expand @boss --me "$me" 2>/dev/null)" || true
+  [[ -n $boss ]] || die "$me 에게는 상급자가 없습니다. 보고 대신 ./aiorg send <상대> 로 직접 보내세요."
+
+  local -a args=("$boss" --from "$me" --type report)
+  [[ -n $task ]] && args+=(--task "$task")
+  [[ -n $subject ]] && args+=(--subject "$subject")
+  cmd_send "${args[@]}" -- "${words[@]}"
+}
+
+cmd_inbox() {
+  local me
+  me="$(require_me)" || exit 1
+  st inbox --me "$me" "$@"
+}
+
+cmd_task() {
+  local sub="${1:-list}"; shift || true
+  local me
+  me="$(aiorg_whoami)"
+  case "$sub" in
+    new)
+      local -a args=(task-new)
+      [[ -n $me ]] && args+=(--assigner "$me")
+      st "${args[@]}" "$@"
+      ;;
+    start)   task_transition in_progress "$me" "$@" ;;
+    done)    task_transition done "$me" "$@" ;;
+    block)   task_transition blocked "$me" "$@" ;;
+    review)  task_transition review "$me" "$@" ;;
+    cancel)  task_transition cancelled "$me" "$@" ;;
+    set)     st task-set --by "${me:-unknown}" "$@" ;;
+    show)
+      local tid="${1:-}"; shift || true
+      [[ -n $tid ]] || die "태스크 id 를 지정하세요."
+      st task-show --id "$tid" "$@"
+      ;;
+    tree)    st task-tree ;;
+    list|"")
+      local -a args=(task-list)
+      while (($#)); do
+        case "$1" in
+          --mine) [[ -n $me ]] && args+=(--assignee "$me"); shift ;;
+          --open) args+=(--open-only); shift ;;
+          *) args+=("$1"); shift ;;
+        esac
+      done
+      st "${args[@]}"
+      ;;
+    *) die "task: 알 수 없는 하위 명령 '$sub' (new|start|done|block|review|cancel|set|show|list|tree)" ;;
+  esac
+}
+
+task_transition() {
+  local status="$1" by="$2"; shift 2
+  local tid="${1:-}"; shift || true
+  [[ -n $tid ]] || die "태스크 id 를 지정하세요.  예: ./aiorg task $status t_ab12cd34"
+  st task-set --id "$tid" --status "$status" --by "${by:-unknown}" "$@"
+}
+
+# 보류된 벨을 재시도. --watch 면 계속 돈다.
+cmd_notify() {
+  local watch=0 interval=20
+  while (($#)); do
+    case "$1" in
+      --watch|-w) watch=1; shift ;;
+      --interval) interval="$2"; shift 2 ;;
+      *) die "notify: 알 수 없는 옵션 '$1'" ;;
+    esac
+  done
+
+  while :; do
+    local to n delivered=0 held=0
+    while IFS=$'\t' read -r to n; do
+      [[ -n $to ]] || continue
+      if deliver_bell "$to"; then
+        # 이 수신자의 queued 메시지 전부를 notified 로 넘긴다 (벨 한 번에 다 알림).
+        st inbox --me "$to" --peek --json | "$AIORG_PY" -c '
+import json, sys
+for m in json.load(sys.stdin):
+    if m.get("state") == "queued":
+        print(m["id"])
+' | while read -r mid; do
+          [[ -n $mid ]] && st msg-mark --id "$mid" --state notified >/dev/null
+        done
+        printf '%s: %s건 알림 전달\n' "$to" "$n"
+        delivered=$((delivered + 1))
+      else
+        printf '%s: %s건 보류 (작업중/미가동)\n' "$to" "$n"
+        held=$((held + 1))
+      fi
+    done < <(st pending)
+
+    if ((delivered == 0 && held == 0)); then
+      ((watch)) || info "보류된 알림이 없습니다."
+    fi
+    ((watch)) || break
+    sleep "$interval"
+  done
+}
+
+cmd_org() { cmd_status "$@"; }
+
+# 특정 멤버의 화면에 붙는다. 응답대기(대화상자) 처리에 쓴다.
+cmd_attach() {
+  local who="${1:-}"
+  if [[ -z $who ]]; then
+    info "붙을 수 있는 세션:"
+    local dept
+    while IFS=$'\t' read -r dept _; do
+      [[ -n $dept ]] || continue
+      info "  tmux attach -t $(aiorg_session_name "$dept")"
+    done < <(st sessions)
+    info ""
+    info "특정 멤버에게 바로 붙으려면: ./aiorg attach <멤버id>"
+    return 0
+  fi
+  local pane sess
+  pane="$(aiorg_pane_of "$who")"
+  sess="$(aiorg_session_of "$who")"
+  [[ -n $pane ]] || die "'$who' 의 자리를 찾을 수 없습니다. ./aiorg up 을 실행했는지 확인하세요."
+  aiorg_pane_alive "$pane" || die "'$who' 의 pane 이 이미 없습니다. ./aiorg up 으로 다시 세우세요."
+
+  if [[ -n ${TMUX:-} ]]; then
+    # 이미 tmux 안이면 중첩 attach 는 거부된다. 해당 창으로 전환만 한다.
+    tmux switch-client -t "$pane" 2>/dev/null && return 0
+    die "이미 tmux 안입니다. 다른 세션이라면: tmux switch-client -t $sess"
+  fi
+  tmux select-window -t "$pane" 2>/dev/null || true
+  exec tmux attach -t "$sess"
+}
+
+# 상태 감지가 어긋날 때 어떤 표지가 걸렸는지 본다.
+# Claude Code UI 문구가 바뀌면 lib/tmuxlib.sh 상단의 AIORG_PAT_* 를 고친다.
+cmd_explain() {
+  local who="${1:-}" pane
+  [[ -n $who ]] || die "사용법: ./aiorg explain <멤버id>"
+  pane="$(aiorg_pane_of "$who")"
+  [[ -n $pane ]] || die "'$who' 의 자리를 찾을 수 없습니다."
+  info "멤버 $who  (pane $pane)"
+  aiorg_explain_state "$pane"
+  info ""
+  info "화면 마지막 8줄:"
+  tmux capture-pane -p -t "$pane" -S -8 2>/dev/null | sed 's/^/  | /'
+}
+
+cmd_doctor() {
+  local ok=1
+  printf '환경 점검\n'
+  printf '  AIORG_HOME : %s\n' "$AIORG_HOME"
+  printf '  나          : %s\n' "$(aiorg_whoami || echo '(미확인 — 조직 세션 밖)')"
+  for c in tmux git; do
+    if command -v "$c" >/dev/null; then
+      printf '  %-11s: %s\n' "$c" "$(command -v "$c")"
+    else
+      printf '  %-11s: 없음  <-- 필요\n' "$c"; ok=0
+    fi
+  done
+  if "$AIORG_PY" -c 'import sys; sys.exit(0)' 2>/dev/null; then
+    printf '  %-11s: %s\n' "python3" "$("$AIORG_PY" -V 2>&1)"
+  else
+    printf '  %-11s: 없음  <-- 필요\n' "python3"; ok=0
+  fi
+  if "$AIORG_PY" -c 'import yaml' 2>/dev/null; then
+    printf '  %-11s: 설치됨\n' "PyYAML"
+  else
+    printf '  %-11s: 없음  <-- pip install pyyaml\n' "PyYAML"; ok=0
+  fi
+  if command -v claude >/dev/null; then
+    printf '  %-11s: %s\n' "claude" "$(claude --version 2>&1 | head -1)"
+  else
+    printf '  %-11s: 없음  <-- 이 셸에서 claude 를 띄울 수 없습니다\n' "claude"; ok=0
+  fi
+  printf '\n'
+  ((ok)) && printf '이상 없습니다.\n' || printf '위의 누락 항목을 먼저 해결하세요.\n'
+  ((ok)) || exit 1
+}
+
+cmd_help() {
+  cat <<'HELP'
+aiorg — AI 조직 프레임워크
+
+조직 운영 (사람이 쓰는 명령)
+  ./aiorg templates                    조직 템플릿 목록
+  ./aiorg new <템플릿> [이름]           템플릿을 org/<이름>.yaml 로 복사
+  ./aiorg up [--org 이름|경로] [--launch]  조직도대로 tmux 세션 구성
+  ./aiorg launch                       각 pane 에서 claude 기동
+  ./aiorg brief                        각 멤버에게 역할·지시서 안내 전달
+  ./aiorg status                       조직도 + 각자 상태 + 미확인/진행 현황
+  ./aiorg notify [--watch]             보류된 알림 재시도
+  ./aiorg attach [멤버]                 세션/특정 멤버 화면에 붙기
+  ./aiorg down                         세션 종료 (기록은 남음)
+  ./aiorg log [--limit N] [--grep S]   이벤트 로그
+  ./aiorg doctor                       실행 환경 점검
+  ./aiorg explain <멤버>                상태 감지가 어긋날 때 원인 진단
+
+멤버가 쓰는 명령 (각 Claude 세션 안에서)
+  ./aiorg inbox [--all] [--peek]       내 수신함 확인 (읽으면 확인 처리)
+  ./aiorg send <상대> "<본문>"          메시지 전송
+  ./aiorg reply <메시지id> "<본문>"     답신
+  ./aiorg assign <담당자> "<제목>"      태스크 배정 + 지시 (관리자)
+      [--detail "상세"] [--parent <상위태스크>] [--branch <브랜치>]
+  ./aiorg report [--task <id>] "<본문>" 상급자에게 보고 (실무자)
+  ./aiorg members [--skill X] [--ids] 전원의 담당/역량 (배정 상대 고를 때)
+  ./aiorg areas                        코드 영역과 담당자 (기존 제품에 붙였을 때)
+  ./aiorg task list [--mine] [--open]  태스크 목록
+  ./aiorg task start|done|block|review|cancel <id> [--note "..."]
+  ./aiorg task show <id> / tree
+  ./aiorg whoami                       내 id
+
+받는 사람 선택자
+  dev-1            멤버 한 명
+  @all             전원
+  @reports         내 직속 부하 전원
+  @boss            내 직속 상급자
+  @role:engineer   해당 역할 전원
+  @dept:dev        해당 부서(세션) 전원
+
+여러 줄 본문
+  ./aiorg send dev-1 - <<'EOT'      또는  --file <경로>
+  첫째 줄
+  둘째 줄
+  EOT
+HELP
+}
+
+# ---------------------------------------------------------------- 디스패치
+
+main() {
+  local sub="${1:-help}"; shift || true
+  case "$sub" in
+    up)       cmd_up "$@" ;;
+    launch)   cmd_launch "$@" ;;
+    brief)    cmd_brief "$@" ;;
+    down)     cmd_down "$@" ;;
+    status)   cmd_status "$@" ;;
+    org)      cmd_org "$@" ;;
+    attach)   cmd_attach "$@" ;;
+    explain)  cmd_explain "$@" ;;
+    send)     cmd_send "$@" ;;
+    reply)    cmd_reply "$@" ;;
+    assign)   cmd_assign "$@" ;;
+    report)   cmd_report "$@" ;;
+    inbox)    cmd_inbox "$@" ;;
+    task)     cmd_task "$@" ;;
+    notify)   cmd_notify "$@" ;;
+    log)      st log "$@" ;;
+    members)  st members "$@" ;;
+    areas)    st areas "$@" ;;
+    templates) st templates "$@" ;;
+    new)      st new "$@" ;;
+    whoami)   aiorg_whoami ;;
+    doctor)   cmd_doctor "$@" ;;
+    help|-h|--help) cmd_help ;;
+    *) die "알 수 없는 명령 '$sub' — ./aiorg help 를 보세요." ;;
+  esac
+}
+
+main "$@"

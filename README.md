@@ -1,3 +1,39 @@
+# 🏢 aiorg — AI 조직 프레임워크
+
+조직도를 YAML 로 선언하면, 각 구성원을 독립 Claude Code 세션(tmux)으로 세우고
+그들 사이의 지시·보고·태스크를 파일 큐로 관리한다.
+
+구성원은 전부 Claude 세션이다. **사람은 대표하고만 이야기한다.**
+
+```bash
+wsl                                    # Windows 라면 WSL 안에서
+cd /mnt/c/git/yian/Claude-Code-Communication
+./aiorg doctor                         # 환경 점검
+./aiorg templates                      # 조직 템플릿 목록 (10종)
+./aiorg up --org product-team          # 조직 구성
+./aiorg launch                         # 각 자리에서 claude 기동
+./aiorg status                         # 전원이 '대기' 가 될 때까지 확인
+./aiorg brief                          # 각자에게 역할 안내
+./aiorg attach ceo                     # 대표에게 목표를 지시
+```
+
+대표에게 목표를 말하면 부서장에게 쪼개 내려가고, 실무자가 만들고, 결과가 거꾸로 올라온다.
+진행 상황은 다른 터미널에서 `./aiorg status`, `./aiorg task tree` 로 본다.
+
+- **사용법 전체**: `./aiorg help`
+- **설계와 상세 문서**: [docs/AIORG.md](docs/AIORG.md)
+- **조직 템플릿 10종**: [org/templates/](org/templates/) — solo(2) / minimal(4) / startup(5) / product-team(8) / two-po(8) / quality-first(8) / research(5) / research-build(10) / enterprise(14) / **existing-product(8, 기존 제품용)**
+- **역할 지시서**: [org/roles/](org/roles/)
+
+조직을 바꾸려면 조직도 YAML 만 고친다. 스크립트는 손대지 않는다.
+
+---
+
+## 이 아래는 전신(前身) 데모 문서
+
+`setup.sh` / `agent-send.sh` / `instructions/` 로 동작하는 tmux 통신 데모다.
+aiorg 로 대체되었으며 유지되지 않는다. 원본 프로젝트 문서를 그대로 남겨 둔다.
+
 # 🤖 Tmux Multi-Agent Communication Demo
 
 Agent同士がやり取りするtmux環境のデモシステム

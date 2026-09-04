@@ -1,0 +1,52 @@
+# 최소 조직 — 기존 데모(PRESIDENT → boss1 → workers)와 같은 3계층.
+# 프레임워크를 처음 돌려볼 때 이걸로 시작하면 세션이 하나만 뜬다.
+#
+#   ./aiorg up --org org/templates/minimal.yaml
+
+version: 1
+
+org:
+  name: "AI Org (minimal)"
+  description: "4명 1세션. 3계층 기본형, 처음 돌려볼 때."
+  workdir: "."
+  session_prefix: aiorg
+
+roles:
+  ceo:
+    instruction: org/roles/ceo.md
+    icon: "\U0001F451"
+    color: magenta
+    can_assign: true
+  manager:
+    instruction: org/roles/manager.md
+    icon: "\U0001F3AF"
+    color: red
+    can_assign: true
+  engineer:
+    instruction: org/roles/engineer.md
+    icon: "\U0001F527"
+    color: blue
+
+members:
+  - id: ceo
+    title: "대표"
+    role: ceo
+    session: org
+
+  - id: lead
+    title: "팀장"
+    role: manager
+    reports_to: ceo
+    session: org
+
+  - id: w1
+    title: "실무자 A"
+    role: engineer
+    reports_to: lead
+    session: org
+
+  - id: w2
+    title: "실무자 B"
+    role: engineer
+    reports_to: lead
+    session: org

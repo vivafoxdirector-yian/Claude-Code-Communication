@@ -1,0 +1,143 @@
+# AI 조직 정의서
+#
+# 이 파일 하나가 조직의 전부다. 멤버를 추가하면 tmux pane 이 늘고,
+# reports_to 를 바꾸면 보고선이 바뀌고, session 을 바꾸면 부서가 갈린다.
+# 스크립트는 손대지 않는다.
+#
+#   ./aiorg up --org org/templates/product-team.yaml
+#
+# 검증 규칙: id 는 유일해야 하고, reports_to 는 실재하는 멤버여야 하며,
+# 보고선에 순환이 있으면 up 이 거부한다.
+
+version: 1
+
+org:
+  name: "AI Dev Corp"
+  description: "8명 5부서. 기획·개발·품질·사업을 갖춘 표준 조직."
+  workdir: "." # 모든 멤버의 작업 디렉터리 (AIORG_HOME 기준 상대경로 또는 절대경로)
+  session_prefix: aiorg # tmux 세션 이름은 <prefix>-<session> 이 된다
+
+# 역할 템플릿. 멤버는 role 만 지정하면 아래 값을 물려받는다.
+roles:
+  ceo:
+    instruction: org/roles/ceo.md
+    icon: "\U0001F451"
+    color: magenta
+    can_assign: true
+
+  manager:
+    instruction: org/roles/manager.md
+    icon: "\U0001F3AF"
+    color: red
+    can_assign: true
+
+  engineer:
+    instruction: org/roles/engineer.md
+    icon: "\U0001F527"
+    color: blue
+    can_assign: false
+
+  reviewer:
+    instruction: org/roles/reviewer.md
+    icon: "\U0001F50D"
+    color: cyan
+    can_assign: false
+
+  # 기획(PO) — 무엇을 만들지 판단해 대표에게 제안한다.
+  # can_assign 이 false 인 것이 이 역할의 핵심이다. PO 는 개발팀에 지휘권이 없다.
+  # 제안만 하고, 채택과 배정은 대표가 한다. 실제 회사의 PO 와 같다.
+  po:
+    instruction: org/roles/po.md
+    icon: "\U0001F4CB"
+    color: yellow
+    can_assign: false
+    # PO 의 skills 는 기술 역량이 아니라 담당 제품 영역이다.
+    # 엔지니어 둘이 python 을 함께 하는 건 정상이지만, PO 둘이 같은 영역을 들면
+    # 같은 기능을 다르게 기획하게 되고 개발팀은 어느 쪽을 만들지 알 수 없다.
+    # 이 값을 켜두면 up 이 겹침을 잡아 경고한다.
+    exclusive_skills: true
+
+  # 프리세일즈 — 제품과 고객 사이를 양방향으로 나른다.
+  # 밖으로: 영업 자료. 안으로: VOC(고객의 목소리).
+  # PO 와 마찬가지로 지휘권이 없다. VOC 는 입력이지 결정이 아니다.
+  # skills 는 담당 고객군이므로 겹치면 경고한다.
+  presales:
+    instruction: org/roles/presales.md
+    icon: "\U0001F4E3"
+    color: green
+    can_assign: false
+    exclusive_skills: true
+
+# 조직 구성원.
+#   id         : 메시지 주소. 짧게.
+#   title      : 사람이 읽는 직함.
+#   role       : 위 roles 의 키.
+#   reports_to : 직속 상급자 id. 비우면 최상위.
+#   session    : 같은 값을 가진 멤버끼리 하나의 tmux 세션(= 부서)에 묶인다.
+#   skills     : 배정 판단에 쓰이는 참고 태그. 상급자가 status 로 본다.
+members:
+  - id: ceo
+    title: "대표"
+    role: ceo
+    session: exec
+
+  # ---- 개발부 ----
+  - id: dev-lead
+    title: "개발팀장"
+    role: manager
+    reports_to: ceo
+    session: dev
+
+  - id: dev-1
+    title: "백엔드 개발자"
+    role: engineer
+    reports_to: dev-lead
+    session: dev
+    skills: [backend, python, api, db]
+
+  - id: dev-2
+    title: "프론트엔드 개발자"
+    role: engineer
+    reports_to: dev-lead
+    session: dev
+    skills: [frontend, typescript, ui]
+
+  # ---- 기획부 ----
+  # PO 를 늘리려면 여기에 멤버를 추가하고 skills 로 담당 영역을 나눈다.
+  # 둘 이상이면 영역 경계가 필수다 — 두 PO 가 같은 기능을 다르게 기획하면
+  # 개발팀이 어느 쪽을 만들지 알 수 없다. 예시는 org/templates/two-po.yaml 참고.
+  - id: po
+    title: "제품 책임자"
+    role: po
+    reports_to: ceo
+    session: product
+    # PO 의 skills 는 "할 줄 아는 것"이 아니라 "책임지는 영역"이다.
+    # 제품기획·요구사항정의·경쟁사조사 같은 것은 모든 PO 가 하는 일이라
+    # 여기 적으면 안 된다 — 둘로 늘리는 순간 전원이 같은 값을 들게 된다.
+    # 한 명이면 담당은 제품 전체다. 늘릴 때 영역을 쪼갠다.
+    skills: [제품전반]
+
+  # ---- 사업부 ----
+  # 조직에서 고객이라는 입력이 들어오는 유일한 통로다.
+  # 단, VOC 의 원천은 사람이 docs/voc/raw/ 에 넣은 원문뿐이다 (docs/voc/README.md 참고).
+  # 구성원에게는 고객 접점이 없으므로, 그 폴더가 비어 있으면 VOC 도 없는 것이다.
+  - id: presales
+    title: "프리세일즈"
+    role: presales
+    reports_to: ceo
+    session: biz
+    skills: [고객전반]
+
+  # ---- 품질부 ----
+  - id: qa-lead
+    title: "품질팀장"
+    role: manager
+    reports_to: ceo
+    session: qa
+
+  - id: qa-1
+    title: "코드 리뷰어"
+    role: reviewer
+    reports_to: qa-lead
+    session: qa
+    skills: [review, testing, security]

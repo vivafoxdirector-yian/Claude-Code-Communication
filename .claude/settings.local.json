@@ -1,19 +1,50 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./agent-send.sh:*)",
+      "Bash(aiorg whoami)",
+      "Bash(aiorg help)",
+      "Bash(aiorg inbox:*)",
+      "Bash(aiorg send:*)",
+      "Bash(aiorg reply:*)",
+      "Bash(aiorg assign:*)",
+      "Bash(aiorg report:*)",
+      "Bash(aiorg task:*)",
+      "Bash(aiorg status:*)",
+      "Bash(aiorg members:*)",
+      "Bash(aiorg areas:*)",
+      "Bash(aiorg log:*)",
+
+      "Bash(./aiorg whoami)",
+      "Bash(./aiorg help)",
+      "Bash(./aiorg inbox:*)",
+      "Bash(./aiorg send:*)",
+      "Bash(./aiorg reply:*)",
+      "Bash(./aiorg assign:*)",
+      "Bash(./aiorg report:*)",
+      "Bash(./aiorg task:*)",
+      "Bash(./aiorg status:*)",
+      "Bash(./aiorg members:*)",
+      "Bash(./aiorg areas:*)",
+      "Bash(./aiorg log:*)",
+
+      "WebSearch",
+
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(echo:*)",
-      "Bash(if:*)",
-      "Bash([ -f ./tmp/worker*_done.txt ]*)",
-      "Bash(*worker*_done.txt*)",
-      "Bash(mkdir:*)",
-      "Bash(then)",
-      "Bash(else)",
-      "Bash(tmux show-options:*)",
       "Bash(ls:*)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(aiorg up:*)",
+      "Bash(aiorg down:*)",
+      "Bash(aiorg launch:*)",
+      "Bash(aiorg brief:*)",
+      "Bash(aiorg attach:*)",
+      "Bash(./aiorg up:*)",
+      "Bash(./aiorg down:*)",
+      "Bash(./aiorg launch:*)",
+      "Bash(./aiorg brief:*)",
+      "Bash(./aiorg attach:*)"
+    ]
   }
 }

@@ -1,0 +1,161 @@
+# 이미 있는 제품에 조직을 붙이는 형태.
+#
+# 새로 만드는 게 아니라 **기존 코드베이스를 개선·확장**할 때 쓴다.
+# 고쳐야 할 곳은 아래 세 줄이 전부다:
+#
+#   1. org.workdir  — 제품 저장소의 절대경로 (안 쓰면 aiorg 저장소가 기본)
+#   2. org.areas    — 프론트/백엔드 등이 그 안 어디에 있는지
+#   3. members[].areas — 누가 어느 영역을 맡는지
+#
+#   ./aiorg new existing-product mycorp
+#   # org/mycorp.yaml 의 workdir 과 areas 를 내 제품에 맞게 고친다
+#   ./aiorg up --org mycorp
+#   ./aiorg areas          <- 영역과 담당자가 맞는지 확인
+#
+# workdir 이 이 저장소 밖이어도 된다. 구성원 PATH 에 aiorg 가 들어가므로
+# 제품 디렉터리에서도 `aiorg inbox` 가 그대로 동작한다.
+#
+# up 이 확인해 주는 것:
+#   - areas 의 경로가 workdir 아래에 실제로 있는가 (없으면 경고)
+#   - 담당자가 없는 영역이 있는가 (있으면 경고 — 아무도 못 건드리는 코드다)
+
+version: 1
+
+org:
+  name: "AI Org (기존 제품)"
+  description: "이미 있는 제품에 붙이는 형태. workdir 과 areas 를 고쳐 쓴다."
+  session_prefix: aiorg
+  layout: windows
+
+  # 제품 저장소. WSL 경로로 쓴다 (Windows 의 C:\dev\myapp 은 /mnt/c/dev/myapp).
+  workdir: "/mnt/c/git/myproduct"
+
+  # 코드가 어디에 있는지. 경로는 workdir 기준 상대경로다.
+  areas:
+    backend:
+      path: backend/
+      desc: "API 서버"
+    frontend:
+      path: frontend/
+      desc: "웹 UI"
+    infra:
+      path: deploy/
+      desc: "배포 설정, CI"
+
+roles:
+  ceo:
+    instruction: org/roles/ceo.md
+    icon: "\U0001F451"
+    color: magenta
+    can_assign: true
+
+  manager:
+    instruction: org/roles/manager.md
+    icon: "\U0001F3AF"
+    color: red
+    can_assign: true
+
+  engineer:
+    instruction: org/roles/engineer.md
+    icon: "\U0001F527"
+    color: blue
+    can_assign: false
+
+  reviewer:
+    instruction: org/roles/reviewer.md
+    icon: "\U0001F50D"
+    color: cyan
+    can_assign: false
+
+  # 기획(PO) — 무엇을 만들지 판단해 대표에게 제안한다.
+  # can_assign 이 false 인 것이 이 역할의 핵심이다. PO 는 개발팀에 지휘권이 없다.
+  # 제안만 하고, 채택과 배정은 대표가 한다. 실제 회사의 PO 와 같다.
+  po:
+    instruction: org/roles/po.md
+    icon: "\U0001F4CB"
+    color: yellow
+    can_assign: false
+    # PO 의 skills 는 기술 역량이 아니라 담당 제품 영역이다.
+    # 엔지니어 둘이 python 을 함께 하는 건 정상이지만, PO 둘이 같은 영역을 들면
+    # 같은 기능을 다르게 기획하게 되고 개발팀은 어느 쪽을 만들지 알 수 없다.
+    # 이 값을 켜두면 up 이 겹침을 잡아 경고한다.
+    exclusive_skills: true
+
+  # 프리세일즈 — 제품과 고객 사이를 양방향으로 나른다.
+  # 밖으로: 영업 자료. 안으로: VOC(고객의 목소리).
+  # PO 와 마찬가지로 지휘권이 없다. VOC 는 입력이지 결정이 아니다.
+  # skills 는 담당 고객군이므로 겹치면 경고한다.
+  presales:
+    instruction: org/roles/presales.md
+    icon: "\U0001F4E3"
+    color: green
+    can_assign: false
+    exclusive_skills: true
+
+
+members:
+  - id: ceo
+    title: "대표"
+    role: ceo
+    session: exec
+
+  - id: po
+    title: "제품 책임자"
+    role: po
+    reports_to: ceo
+    session: exec
+    skills: [제품전반]
+
+  # ---- 개발부 ----
+  # areas 가 "이 사람이 건드리는 코드"다. 팀장이 배정할 때 이걸 보고 고르고,
+  # 태스크의 파일 범위도 여기서 나온다.
+  - id: dev-lead
+    title: "개발팀장"
+    role: manager
+    reports_to: ceo
+    session: dev
+
+  - id: dev-be
+    title: "백엔드 개발자"
+    role: engineer
+    reports_to: dev-lead
+    session: dev
+    areas: [backend]
+    # 자기 git 워킹트리를 준다. 여러 명이 같은 디렉터리에서 git checkout 을 하면
+    # 서로의 브랜치를 갈아치우기 때문이다. 브랜치는 aiorg/<id> 로 만들어진다.
+    worktree: true
+    skills: [python, api, db]
+
+  - id: dev-fe
+    title: "프론트엔드 개발자"
+    role: engineer
+    reports_to: dev-lead
+    session: dev
+    areas: [frontend]
+    worktree: true
+    skills: [typescript, ui]
+
+  # 인프라를 겸하는 사람. 영역을 둘 이상 맡아도 된다.
+  - id: dev-ops
+    title: "인프라 담당"
+    role: engineer
+    reports_to: dev-lead
+    session: dev
+    areas: [infra, backend]
+    worktree: true
+    skills: [docker, ci, 배포]
+
+  # ---- 품질부 ----
+  - id: qa-lead
+    title: "품질팀장"
+    role: manager
+    reports_to: ceo
+    session: qa
+
+  - id: qa-1
+    title: "코드 리뷰어"
+    role: reviewer
+    reports_to: qa-lead
+    session: qa
+    worktree: true
+    skills: [review, testing, security]
