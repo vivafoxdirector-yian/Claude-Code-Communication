@@ -13,7 +13,6 @@
       "Bash(aiorg members:*)",
       "Bash(aiorg areas:*)",
       "Bash(aiorg log:*)",
-
       "Bash(./aiorg whoami)",
       "Bash(./aiorg help)",
       "Bash(./aiorg inbox:*)",
@@ -26,9 +25,7 @@
       "Bash(./aiorg members:*)",
       "Bash(./aiorg areas:*)",
       "Bash(./aiorg log:*)",
-
       "WebSearch",
-
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(echo:*)",
@@ -43,6 +40,8 @@
       "Bash(aiorg clean:*)",
       "Bash(aiorg scaffold:*)",
       "Bash(aiorg skills:*)",
+      "Bash(aiorg layout:*)",
+      "Bash(aiorg peek:*)",
       "Bash(./aiorg up:*)",
       "Bash(./aiorg down:*)",
       "Bash(./aiorg launch:*)",
@@ -50,7 +49,9 @@
       "Bash(./aiorg attach:*)",
       "Bash(./aiorg clean:*)",
       "Bash(./aiorg scaffold:*)",
-      "Bash(./aiorg skills:*)"
+      "Bash(./aiorg skills:*)",
+      "Bash(./aiorg layout:*)",
+      "Bash(./aiorg peek:*)"
     ]
   }
 }

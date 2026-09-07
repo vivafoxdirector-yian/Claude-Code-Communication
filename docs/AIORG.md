@@ -57,9 +57,14 @@ claude          # 로그인 상태 확인, 필요하면 /login
 [.claude/settings.local.json](../.claude/settings.local.json) 에 구성원용 명령만 허용해 두었다
 (`inbox`, `send`, `reply`, `assign`, `report`, `task`, `status`, `members`, `log`, `whoami`).
 
-조직 자재를 건드리는 `up` / `down` / `launch` / `brief` / `attach` / `clean` / `scaffold` / `skills` 는
-**거부 목록**에 넣었다. 구성원이 실수로 조직을 내리거나, 기록을 지우거나, 사용자 홈을
-건드리지 못하게 하기 위해서다. 이건 운영자의 명령이다.
+조직 자재를 건드리는 `up` / `down` / `launch` / `brief` / `attach` / `clean` / `scaffold` /
+`skills` 는 **거부 목록**에 넣었다. 구성원이 실수로 조직을 내리거나, 기록을 지우거나,
+사용자 홈을 건드리지 못하게 하기 위해서다. 이건 운영자의 명령이다.
+
+관찰용인 `layout` / `peek` 도 거부 목록에 있다. 읽기만 하므로 위험하지는 않지만,
+**남의 화면을 들여다보는 것은 조직의 통신 방식이 아니다.** 구성원끼리는
+`send` / `assign` / `report` / `reply` 로만 주고받는다. 이 둘은 조직 밖에서
+지켜보는 사람의 도구다.
 
 ## 시작하기
 

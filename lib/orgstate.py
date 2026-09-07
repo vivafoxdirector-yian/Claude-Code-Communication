@@ -743,6 +743,54 @@ def cmd_unbriefed(args):
         print(mid)
 
 
+def cmd_layout(args):
+    """tmux 배치를 한 표로 보여준다.
+
+    조직도(누가 어느 부서인가)와 tmux(어느 세션·창·pane 인가)를 눈으로
+    맞춰 보던 것을 한 자리에 모은 것이다. 관찰용이며 아무것도 바꾸지 않는다.
+
+    tmux 사실(창 번호, pane, 상태)은 bash 쪽에서 모아 --rows 로 넘긴다.
+    파이썬에서 tmux 를 부르지 않으려는 것이고, 정렬은 여기서 해야 한다 —
+    str.ljust 는 글자 수로 세어 한글·이모지에서 어긋난다.
+    """
+    org = load_org()
+    titles = {m["id"]: m.get("title", "") for m in org["members"]}
+    rows = []
+    if args.rows:
+        f = Path(args.rows)
+        if f.is_file():
+            for line in f.read_text(encoding="utf-8").splitlines():
+                c = line.split("\t")
+                if len(c) >= 6:
+                    rows.append(c[:6])
+    if not rows:
+        print("자리가 없습니다. ./aiorg up 을 먼저 실행하세요.")
+        return
+
+    badges = {
+        "idle": "대기", "busy": "작업중", "starting": "부팅중",
+        "prompt": "응답대기", "login": "로그인필요", "down": "미가동",
+    }
+    head = ["세션", "창", "자리", "멤버", "직함", "상태"]
+    table = [head]
+    for mid, sess, widx, wname, pane, state in rows:
+        table.append([sess, widx, pane, mid, titles.get(mid, wname), badges.get(state, state)])
+    widths = [max(dwidth(r[i]) for r in table) for i in range(6)]
+    for i, r in enumerate(table):
+        print("  " + "  ".join(pad(r[j], widths[j]) for j in range(6)).rstrip())
+        if i == 0:
+            print("  " + "  ".join("-" * widths[j] for j in range(6)))
+
+    print("")
+    if args.notify:
+        print("  알림 지킴이 : " + args.notify)
+    if args.layout:
+        print("  배치        : " + args.layout)
+    print("")
+    print("  붙기   : ./aiorg attach <멤버>        나오기: Ctrl-b d")
+    print("  엿보기 : ./aiorg peek <멤버>          (붙지 않고 화면만 본다)")
+
+
 def cmd_expand(args):
     """선택자를 실제 멤버 id 목록으로 펼친다.
 
@@ -1373,6 +1421,12 @@ def build_parser():
     s.add_argument("--type", action="append")
     s.add_argument("--grep")
     s.set_defaults(fn=cmd_log)
+
+    s = sub.add_parser("layout")
+    s.add_argument("--rows")
+    s.add_argument("--notify", default="")
+    s.add_argument("--layout", default="")
+    s.set_defaults(fn=cmd_layout)
 
     s = sub.add_parser("unbriefed")
     s.add_argument("--panes")
