@@ -375,7 +375,7 @@ aiorg artifacts
 ```yaml
 roles:
   reviewer:
-    use_skills: [python-code-review, security-review]
+    use_skills: [python-code-review]
   engineer:
     use_skills: [clean-architecture-design, design-patterns]
 
@@ -398,7 +398,11 @@ dev-2   clean-architecture-design, design-patterns, frontend-design
 
 `brief` 가 각자에게 자기 스킬을 알려준다. 안 알려주면 스킬이 있어도 쓰지 않는다.
 
-> 이 역할은 다음 스킬을 씁니다: python-code-review, security-review.
+**없는 스킬 이름을 적어도 생기지는 않는다.** 조용히 실패하지도 않는다 — `brief` 가
+그 이름을 알려주고, 구성원은 지시서대로 "목록에 없습니다" 라고 보고한다. 다만
+해당하는 일을 할 때마다 그 말을 하게 되므로 안 쓸 이름은 지워 두는 편이 낫다.
+
+> 이 역할은 다음 스킬을 씁니다: python-code-review.
 > 해당하는 일을 할 때 그 스킬을 먼저 부르세요. 목록에 없으면 없다고 보고하세요.
 
 ### 스킬은 어디에 두는가 — 이 저장소에 두고, 링크해서 보이게 한다

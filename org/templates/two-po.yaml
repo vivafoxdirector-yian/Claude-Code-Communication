@@ -56,7 +56,7 @@ roles:
     icon: "\U0001F50D"
     color: cyan
     can_assign: false
-    use_skills: [python-code-review, security-review]
+    use_skills: [python-code-review]
 
   po:
     instruction: org/roles/po.md
