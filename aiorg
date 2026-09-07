@@ -921,7 +921,6 @@ for m in json.load(sys.stdin):
   done
 }
 
-cmd_org() { cmd_status "$@"; }
 # tmux 배치를 한 표로. 조직도와 tmux 를 눈으로 맞춰 보던 것을 모은 것이다.
 cmd_layout() {
   [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
@@ -1088,6 +1087,8 @@ aiorg — AI 조직 프레임워크
   ./aiorg down                         세션 종료 (기록은 남음)
   ./aiorg clean [--force]              runtime/ 정리 — 무엇을 잃는지 먼저 보여준다
   ./aiorg log [--limit N] [--grep S]   이벤트 로그
+  ./aiorg scaffold                     제품 저장소에 산출물 디렉터리를 만든다
+  ./aiorg skills [--link|--unlink]     스킬을 어디서든 보이게 연결 (~/.claude/skills/)
   ./aiorg doctor                       실행 환경 점검
   ./aiorg explain <멤버>                상태 감지가 어긋날 때 원인 진단
 
@@ -1101,8 +1102,6 @@ aiorg — AI 조직 프레임워크
   ./aiorg members [--skill X] [--ids] 전원의 담당/역량 (배정 상대 고를 때)
   ./aiorg areas                        코드 영역과 담당자 (기존 제품에 붙였을 때)
   ./aiorg artifacts                    산출물 자리 (설계·ADR·테스트계획 등)
-  ./aiorg scaffold                     제품 저장소에 산출물 디렉터리를 만든다
-  ./aiorg skills [--link|--unlink]     스킬을 어디서든 보이게 연결 (~/.claude/skills/)
   ./aiorg task list [--mine] [--open]  태스크 목록
   ./aiorg task start|done|block|review|cancel <id> [--note "..."]
   ./aiorg task show <id> / tree
@@ -1134,7 +1133,6 @@ main() {
     brief)    cmd_brief "$@" ;;
     down)     cmd_down "$@" ;;
     status)   cmd_status "$@" ;;
-    org)      cmd_org "$@" ;;
     attach)   cmd_attach "$@" ;;
     layout)   cmd_layout "$@" ;;
     peek)     cmd_peek "$@" ;;

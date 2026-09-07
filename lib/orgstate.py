@@ -542,7 +542,7 @@ def cmd_templates(args):
     for r in rows:
         print("".join(pad(r[i], widths[i]) for i in range(2)) + r[2])
     print()
-    print("바로 띄우기 : ./aiorg up --org <템플릿>")
+    print("바로 띄우기 : ./aiorg up --org <템플릿>   (existing-product 는 경로를 고쳐야 뜬다)")
     print("내 것으로 복사: ./aiorg new <템플릿> [이름]   -> org/<이름>.yaml")
 
 
