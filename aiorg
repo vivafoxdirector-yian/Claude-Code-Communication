@@ -292,6 +292,9 @@ cmd_launch() {
   # 소스가 작업 디렉터리 밖에 있는 배치에서는 코드가 있는 곳도 열어 줘야 한다.
   # 안 그러면 팀장·리뷰어가 코드를 한 줄도 못 읽고, 겉으로는 대화상자가 떠서
   # 멈춘 것으로만 보인다. AIORG_CLAUDE_CMD 로 직접 지정했으면 손대지 않는다.
+  #
+  # --add-dir 은 작업 디렉터리를 더하는 것이므로 쓰기까지 열린다. 영역 경계는
+  # 도구가 아니라 areas 와 지시서가 지킨다 — 여기서 막을 수 있는 것이 아니다.
   local add_areas=1
   [[ -n ${AIORG_CLAUDE_CMD:-} ]] && add_areas=0
   local id sess pane state count=0 running=""
