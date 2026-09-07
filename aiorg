@@ -131,6 +131,29 @@ send_one() {
     printf '%s\t%s\t%s\n' "$to" "$mid" "대기(수신자 작업중 또는 미가동 — ./aiorg notify 로 재시도)"
   fi
 }
+# 운영자 전용 명령을 구성원이 쓰지 못하게 막는다.
+#
+# 원래는 .claude/settings.local.json 의 거부 목록에 맡겼는데, 실측해 보니
+# 구성원에게는 걸리지 않았다. Claude Code 설정은 프로젝트 루트와 사용자
+# 레벨에서만 읽히고, 구성원의 프로젝트 루트는 제품 저장소다 —
+# --add-dir 로 프레임워크 저장소를 열어 줘도 그곳의 설정은 읽지 않는다.
+# 즉 구성원이 aiorg down 을 쳐서 조직 전체를 내릴 수 있었다.
+#
+# 그래서 설정에 기대지 않고 여기서 막는다. 멤버 pane 에는 AIORG_ME 가
+# 심겨 있고, 그것이 없어도 TMUX_PANE 으로 되짚을 수 있다.
+aiorg_require_operator() {
+  local who
+  who="$(aiorg_whoami 2>/dev/null || true)"
+  [[ -n $who ]] || return 0
+  die "'$1' 은 운영자(사람)의 명령입니다. 구성원($who)은 쓰지 않습니다.
+
+  조직을 세우고 내리는 것은 조직 밖에 있는 사람의 일입니다.
+  당신이 할 수 있는 것은 ./aiorg help 의 '멤버가 쓰는 명령' 절에 있습니다.
+
+  막힌 것이 있으면 상급자에게 보고하세요:
+    aiorg report \"무엇에 막혔는지\""
+}
+
 
 # ---------------------------------------------------------------- 서브커맨드
 
@@ -244,6 +267,23 @@ for m in json.load(sys.stdin):
   done < <(st sessions)
 
   st event --type org.up --kv "source=$orgfile" >/dev/null
+
+  # 구성원 권한 설정이 없으면 조직이 승인 대기에서 멈춘다. 제품 저장소에
+  # 파일을 만드는 것은 사람의 결정이므로 여기서는 알려만 준다.
+  if [[ $workdir != "$AIORG_HOME" ]]; then
+    local nmissing
+    nmissing="$(st permissions "$workdir" --check 2>/dev/null || echo 0)"
+    if [[ ${nmissing:-0} -gt 0 ]]; then
+      info ""
+      info "경고: 제품 저장소에 구성원용 권한 설정이 없습니다 (${nmissing}건)."
+      info "      Claude Code 설정은 프로젝트 루트에서만 읽히는데, 구성원의"
+      info "      프로젝트 루트는 제품 저장소입니다. 이 저장소의 허용 목록은"
+      info "      구성원에게 걸리지 않습니다."
+      info "      그대로 두면 구성원이 aiorg 명령마다 승인을 요구받고,"
+      info "      사람이 지켜보지 않으면 거기서 멈춥니다."
+      info "        ./aiorg scaffold      $workdir/.claude/settings.local.json 을 만든다"
+    fi
+  fi
 
   # 알림 지킴이를 함께 띄운다. 사람이 기억해야 하는 것으로 두면 잊고,
   # 잊으면 조직이 조용히 멈춘다 (전원 '대기' 인데 미확인이 줄지 않는다).
@@ -569,6 +609,10 @@ except Exception:
     printf '%s
 ' "# VOC 전달 대장" ""       "프리세일즈가 관리한다. 같은 VOC 를 두 번 전달하지 않기 위한 기록이다." ""       "| 날짜 | VOC | 출처(raw) | 전달처 | 결과 |" "|---|---|---|---|---|"       >"$workdir/docs/voc/routed.md" && info "  만듦   docs/voc/routed.md"
   fi
+
+  # 구성원 권한 설정. 없으면 구성원이 aiorg 명령마다 승인을 요구받는다 —
+  # 이 저장소의 거부/허용 목록은 구성원에게 걸리지 않는다 (실측 확인).
+  st permissions "$workdir"
 
   info ""
   if ((made)); then
@@ -1127,6 +1171,10 @@ HELP
 
 main() {
   local sub="${1:-help}"; shift || true
+  case "$sub" in
+    up|launch|brief|down|clean|scaffold|skills|attach|layout|peek)
+      aiorg_require_operator "$sub" ;;
+  esac
   case "$sub" in
     up)       cmd_up "$@" ;;
     launch)   cmd_launch "$@" ;;

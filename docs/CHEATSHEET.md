@@ -16,7 +16,7 @@
 ./aiorg templates                    # 조직 템플릿 목록 10종
 ./aiorg new product-team mycorp      # org/mycorp.yaml 로 복사 -> workdir 을 고친다
 ./aiorg up --org mycorp              # 조직도대로 tmux 세션 구성 + 알림 지킴이
-./aiorg scaffold                     # 제품 저장소에 산출물 디렉터리 생성
+./aiorg scaffold                     # 산출물 디렉터리 + 구성원 권한 설정을 제품 저장소에
 ./aiorg launch                       # 각 자리에서 claude 기동
 ./aiorg status                       # 전원 '대기' 확인
 ./aiorg brief                        # 각자에게 역할·지시서 안내  <- 빼먹으면 조직이 안 생긴다

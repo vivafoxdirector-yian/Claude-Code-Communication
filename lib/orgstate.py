@@ -833,6 +833,80 @@ def cmd_adddirs(args):
         print(d)
 
 
+MEMBER_COMMANDS = [
+    "whoami", "help", "inbox", "send", "reply", "assign", "report",
+    "task", "status", "members", "areas", "artifacts", "log",
+]
+
+
+OPERATOR_COMMANDS = [
+    "up", "launch", "brief", "down", "clean", "scaffold",
+    "skills", "attach", "layout", "peek",
+]
+
+
+def member_allow_rules():
+    """구성원이 승인 없이 쓸 수 있어야 하는 규칙."""
+    out = []
+    for form in ("aiorg", "./aiorg"):
+        for c in MEMBER_COMMANDS:
+            out.append("Bash(" + form + " " + c + ":*)")
+    return out
+
+
+def operator_deny_rules():
+    """구성원이 쓰면 안 되는 규칙.
+
+    aiorg 자신도 이것을 거부하지만(AIORG_ME 로 판정), 두 겹으로 둔다.
+    설정이 존중되는 상황에서는 도구 단계에서 먼저 막히는 편이 낫다.
+    """
+    out = []
+    for form in ("aiorg", "./aiorg"):
+        for c in OPERATOR_COMMANDS:
+            out.append("Bash(" + form + " " + c + ":*)")
+    return out
+
+
+def cmd_permissions(args):
+    """제품 저장소에 구성원용 권한 설정을 만들거나 점검한다.
+
+    왜 제품 저장소인가: Claude Code 설정은 프로젝트 루트와 사용자 레벨에서만
+    읽힌다. 구성원의 프로젝트 루트는 제품 저장소이므로, 이 프레임워크 저장소의
+    .claude/settings.local.json 은 구성원에게 걸리지 않는다 — --add-dir 로
+    열어 줘도 그렇다. 실측으로 확인했다.
+
+    없으면 구성원이 aiorg 명령마다 승인을 요구받는다. 사람이 지켜보고 있지
+    않으면 조직이 거기서 멈춘다.
+    """
+    dst = Path(args.workdir) / ".claude" / "settings.local.json"
+    want = member_allow_rules()
+    cur = {}
+    if dst.is_file():
+        try:
+            cur = json.loads(dst.read_text(encoding="utf-8"))
+        except Exception:
+            print("aiorg: " + str(dst) + " 를 읽지 못했습니다. 손대지 않습니다.", file=sys.stderr)
+            return
+    perms = cur.setdefault("permissions", {})
+    allow = perms.setdefault("allow", [])
+    deny = perms.setdefault("deny", [])
+    nodeny = [r for r in operator_deny_rules() if r not in deny]
+    missing = [r for r in want if r not in allow]
+    if args.check:
+        print(len(missing) + len(nodeny))
+        return
+    if not missing and not nodeny:
+        print("  있음   .claude/settings.local.json  (허용 " + str(len(want))
+              + " / 거부 " + str(len(operator_deny_rules())) + ")")
+        return
+    allow.extend(missing)
+    deny.extend(nodeny)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(json.dumps(cur, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("  만듦   .claude/settings.local.json  (허용 " + str(len(missing))
+          + "건 / 거부 " + str(len(nodeny)) + "건 추가)")
+
+
 def cmd_expand(args):
     """선택자를 실제 멤버 id 목록으로 펼친다.
 
@@ -1467,6 +1541,11 @@ def build_parser():
     s = sub.add_parser("adddirs")
     s.add_argument("--member", required=True)
     s.set_defaults(fn=cmd_adddirs)
+
+    s = sub.add_parser("permissions")
+    s.add_argument("workdir")
+    s.add_argument("--check", action="store_true")
+    s.set_defaults(fn=cmd_permissions)
 
     s = sub.add_parser("layout")
     s.add_argument("--rows")
