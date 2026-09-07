@@ -56,6 +56,7 @@
 ./aiorg log                     # 이벤트 로그
 ```
 
+명령만 빠르게 찾으려면 [docs/CHEATSHEET.md](docs/CHEATSHEET.md).
 처음 돌려본다면 [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) 를 따라간다.
 이미 있는 제품에 붙이려면 [docs/EXISTING-PRODUCT.md](docs/EXISTING-PRODUCT.md).
 전체 사용법은 `./aiorg help`, 설계 배경과 상세는 [docs/AIORG.md](docs/AIORG.md).

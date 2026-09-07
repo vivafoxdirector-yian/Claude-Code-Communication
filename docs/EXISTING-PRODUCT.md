@@ -1,5 +1,7 @@
 # 이미 있는 제품에 조직 붙이기
 
+명령만 빠르게 찾으려면 [CHEATSHEET.md](CHEATSHEET.md) 를 본다.
+
 빈 저장소에서 시작하는 것은 [GETTING-STARTED.md](GETTING-STARTED.md) 를 본다.
 여기서는 **이미 코드가 있는 제품**에 조직을 붙인다. 다른 점은 셋이다.
 
