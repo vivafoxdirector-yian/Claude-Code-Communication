@@ -73,6 +73,10 @@
 고객 근거로 둔갑시키면 PO 가 확인할 원문이 없기 때문이다.
 근거로 남기려면 `docs/voc/raw/` 를 거쳐야 한다. 안내는 [docs/voc/README.md](docs/voc/README.md).
 
+**비용도 같다.** 구성원에게는 청구 시스템 접점이 없으므로, 숫자는 사람이
+`docs/finops/raw/` 에 넣은 것에서만 나온다. 비어 있으면 PO 는 "비용 자료가 없습니다"
+라고 보고한다. 안내는 [docs/finops/README.md](docs/finops/README.md).
+
 ## 실행 환경
 
 tmux 가 필요하다. Windows 에서는 WSL 안에서 실행한다.
@@ -96,6 +100,7 @@ cd /mnt/c/git/yian/Claude-Code-Communication
 | `runtime/` | 조직 상태 (메시지 큐, 태스크, 로그). 저절로 안 사라진다 — `./aiorg clean` |
 | `worktrees/` | git 워킹트리. **커밋 안 된 코드가 있을 수 있어 runtime/ 과 분리** |
 | `docs/voc/raw/` | 고객 발언 원문. **사람만 쓴다** — 구성원은 읽기 전용 |
+| `docs/finops/` | 청구·사용 자료 규약. `raw/` 는 **사람만 쓴다**. PO 가 분석 |
 | `docs/sales/` | 영업 자료 (프리세일즈 작성 → PO 사실확인 → 대표 승인) |
 | `docs/product/` | 조사 결과, 요구사항 정의서 (PO 작성) |
 

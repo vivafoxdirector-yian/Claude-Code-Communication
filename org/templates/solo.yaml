@@ -59,6 +59,8 @@ roles:
     icon: "\U0001F4CB"
     color: yellow
     can_assign: false
+    # 비용은 제품 결정의 한 축이다. 자료는 docs/finops/raw/ 에서만 온다.
+    use_skills: [cloud-finops]
     # PO 의 skills 는 기술 역량이 아니라 담당 제품 영역이다.
     # 엔지니어 둘이 python 을 함께 하는 건 정상이지만, PO 둘이 같은 영역을 들면
     # 같은 기능을 다르게 기획하게 되고 개발팀은 어느 쪽을 만들지 알 수 없다.

@@ -63,6 +63,8 @@ roles:
     icon: "\U0001F4CB"
     color: yellow
     can_assign: false
+    # 비용은 제품 결정의 한 축이다. 자료는 docs/finops/raw/ 에서만 온다.
+    use_skills: [cloud-finops]
     # skills 가 담당 제품 영역이므로 겹치면 경고한다. 아래 두 PO 는 겹치지 않는다.
     exclusive_skills: true
 
