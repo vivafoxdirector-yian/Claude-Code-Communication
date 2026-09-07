@@ -101,6 +101,46 @@ AIORG_ASCII=1 ./aiorg status         # 이모지가 물음표로 보일 때
 
 **`Ctrl-D` 와 `exit` 은 치지 않는다** — pane 이 닫히고, 창이 하나뿐인 부서는 세션째 사라진다.
 
+## tmux 를 직접 보기
+
+`layout` 으로 안 보이는 것을 볼 때. 조직을 안 건드린다.
+
+```bash
+tmux ls                                          # 세션 목록. (attached) 가 지금 붙어 있는 것
+tmux list-panes -a -F '#{session_name} #{window_index}:#{window_name} #{pane_id} #{pane_current_command}' | sort
+tmux list-windows -t aiorg-dev                   # 한 부서의 창만
+tmux capture-pane -p -t %3 | tail -30            # pane 화면 (aiorg peek 이 하는 일)
+tmux display-message -p -t %3 '#{pane_current_path}'   # 그 자리가 어느 디렉터리인가
+```
+
+```
+tx-biz: 1 windows (created Mon Sep  7 12:03:49 2026)
+tx-dev: 3 windows (created Mon Sep  7 12:03:49 2026)
+tx-exec: 1 windows (created Mon Sep  7 12:03:48 2026)
+tx-notify: 1 windows (created Mon Sep  7 12:03:49 2026)
+```
+
+```
+tx-dev 0:dev-lead %1 zsh        <- pane_current_command 가 claude 가 아니면 그 자리는 죽은 것
+tx-dev 1:dev-1    %2 claude
+tx-exec 0:ceo     %0 claude
+```
+
+창 이름이 곧 멤버 id 다. `<prefix>-notify` 는 알림 지킴이이고 구성원이 아니다.
+
+```bash
+# 멤버 id 로 pane 찾기
+awk -F'\t' '$1=="dev-1"{print $3}' runtime/panes.tsv
+
+# 밖에서 강제로 떼기 (붙은 채 Ctrl-b d 가 안 될 때)
+tmux detach-client -s aiorg-exec
+
+# 조직 밖에서 만든 세션까지 전부 (aiorg down 은 조직 세션만 내린다)
+tmux kill-server
+```
+
+`tmux kill-server` 는 **조직과 무관한 당신의 다른 tmux 세션까지 죽인다.** 확인하고 쓴다.
+
 ## 알림
 
 ```bash
