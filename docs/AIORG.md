@@ -69,6 +69,7 @@ claude          # 로그인 상태 확인, 필요하면 /login
 ## 시작하기
 
 > 처음이라면 [GETTING-STARTED.md](GETTING-STARTED.md) 를 따라가는 편이 빠르다.
+> 이미 있는 제품에 붙이는 것이라면 [EXISTING-PRODUCT.md](EXISTING-PRODUCT.md) 다.
 > `product-team` 으로 조직을 세워 목표를 주고 결과를 받는 과정을 순서대로 적어 두었다.
 > 아래는 요약이다.
 

@@ -132,7 +132,9 @@ Windows 경로는 WSL 형식으로 쓴다 — `C:\dev\myapp` 이면 `/mnt/c/dev/
 ```
 
 > 이미 있는 제품에 붙이려면 `product-team` 대신 `existing-product` 를 복사한다.
-> 코드 영역(`areas`)과 멤버별 워킹트리까지 준비된 형태다. [AIORG.md](AIORG.md) 참고.
+> 코드 영역(`areas`)과 멤버별 워킹트리까지 준비된 형태다.
+> 그쪽은 절차가 꽤 다르므로 전용 문서를 따로 두었다 —
+> [EXISTING-PRODUCT.md](EXISTING-PRODUCT.md).
 
 ---
 

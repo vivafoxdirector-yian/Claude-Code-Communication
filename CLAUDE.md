@@ -57,6 +57,7 @@
 ```
 
 처음 돌려본다면 [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) 를 따라간다.
+이미 있는 제품에 붙이려면 [docs/EXISTING-PRODUCT.md](docs/EXISTING-PRODUCT.md).
 전체 사용법은 `./aiorg help`, 설계 배경과 상세는 [docs/AIORG.md](docs/AIORG.md).
 
 ## 사람이 조직에 넣는 것 — 경로는 둘이다
