@@ -158,6 +158,101 @@ frontend  web/     dev-fe           웹 UI
 infra     deploy/  dev-ops          배포 설정, CI
 ```
 
+## 4-2. 저장소가 여럿일 때
+
+프론트와 백엔드가 **각각 다른 git 저장소**에 있는 경우다. `workdir` 은 하나뿐이므로
+그대로는 안 맞는다. 두 가지 배치가 가능하다.
+
+### 배치 A — 공통 부모를 기준점으로 (저장소들이 한 폴더 아래 있을 때)
+
+```yaml
+org:
+  workdir: "/mnt/c/git/innogrid"        # 두 저장소를 담고 있는 부모
+  areas:
+    backend:  { path: tabcloudit-v2/, desc: "API 서버" }
+    frontend: { path: cmp-frontend/, desc: "웹 UI" }
+  artifacts:
+    design: { path: docs/design/, desc: "기술 설계" }
+    ...
+
+members:
+  - id: dev-be
+    areas: [backend]
+    workdir: "/mnt/c/git/innogrid/tabcloudit-v2"     # 자기 저장소 안에 앉힌다
+  - id: dev-fe
+    areas: [frontend]
+    workdir: "/mnt/c/git/innogrid/cmp-frontend"
+```
+
+**`worktree: true` 는 끈다.** 워킹트리는 여러 명이 *같은* 저장소에서 `git checkout`
+으로 서로의 브랜치를 갈아치우는 것을 막는 장치다. 저장소가 다르면 충돌하지 않는다.
+게다가 워킹트리는 `org.workdir` 을 저장소로 보므로, 부모가 git 저장소가 아니면
+`up` 이 이렇게 거부한다.
+
+```
+aiorg: 워킹트리를 쓰려면 작업 디렉터리가 git 저장소여야 합니다: /mnt/c/git/innogrid
+```
+
+`workdir` 을 안 준 멤버(대표, PO, 팀장, 리뷰어)는 부모에 앉는다. 두 저장소가 그 아래
+있으므로 읽기는 문제없다. 다만 **부모가 git 저장소가 아니면 그들이 만드는 문서가
+커밋되지 않는다.** 부모를 문서 전용 저장소로 만들면 해결된다.
+
+```bash
+cd /mnt/c/git/innogrid && git init
+cat > .gitignore <<'EOF'
+# 문서만 추적한다. 이 아래의 다른 저장소·작업 폴더는 건드리지 않는다.
+/*
+!/.gitignore
+!/docs/
+EOF
+git add -A && git commit -m "docs: 조직 산출물 저장소 시작"
+```
+
+`git status` 에 문서만 잡히고, 아래 저장소들은 영향을 받지 않는다.
+
+### 배치 B — 산출물 전용 디렉터리를 기준점으로
+
+소스와 무관한 곳을 기준점으로 두고 `areas` 를 절대경로로 가리킨다.
+제품 저장소를 건드리지 않고 조직의 산출물만 따로 모으고 싶을 때 쓴다.
+
+```yaml
+org:
+  workdir: "/mnt/c/git/yian/tabcloudit"      # 산출물만 모으는 저장소
+  areas:
+    backend:  { path: /mnt/c/git/innogrid/tabcloudit-v2/, desc: "API 서버" }
+    frontend: { path: /mnt/c/git/innogrid/cmp-frontend/, desc: "웹 UI" }
+
+members:
+  - id: dev-be
+    workdir: "/mnt/c/git/innogrid/tabcloudit-v2"
+  - id: dev-fe
+    workdir: "/mnt/c/git/innogrid/cmp-frontend"
+```
+
+기준점을 `git init` 해두면 문서가 거기 쌓이고 커밋된다. `areas` 가 절대경로라
+소스는 원래 자리에 그대로 둔다.
+
+**소스가 작업 디렉터리 밖이면 읽기 권한이 필요하다.** Claude Code 는 시작한
+디렉터리 밖을 읽으려 할 때 사람에게 묻기 때문이다. `launch` 가 이것을 알아서
+열어 준다 — `areas` 중 그 멤버의 작업 디렉터리 밖에 있는 것을 `--add-dir` 로 붙인다.
+
+```
+dev-lead  claude --add-dir "<프레임워크>" --add-dir "/mnt/c/git/innogrid/tabcloudit-v2" --add-dir "/mnt/c/git/innogrid/cmp-frontend"
+dev-be    claude --add-dir "<프레임워크>" --add-dir "/mnt/c/git/innogrid/cmp-frontend"
+```
+
+`dev-be` 에게 프론트가 붙는 것은 자기 저장소 밖이기 때문이다. **읽기가 열리는
+것이고 쓰기 경계는 `areas` 와 지시서가 정한다.**
+
+### 어느 쪽을 고를까
+
+| | 배치 A (공통 부모) | 배치 B (산출물 전용) |
+|---|---|---|
+| 소스가 한 폴더 아래 있다 | ✅ 자연스럽다 | 굳이 |
+| 소스가 흩어져 있다 | 안 된다 | ✅ |
+| 제품 저장소에 문서를 안 남기고 싶다 | 부모에 남는다 | ✅ 완전히 분리 |
+| 팀장·리뷰어가 코드를 읽는다 | cwd 안이라 바로 | `--add-dir` 로 열림 |
+
 ## 5. 워킹트리 — 왜 필수인가
 
 기존 제품에서는 `worktree: true` 가 사실상 필수다. 안 쓰면 이렇게 된다.

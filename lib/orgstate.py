@@ -791,6 +791,48 @@ def cmd_layout(args):
     print("  엿보기 : ./aiorg peek <멤버>          (붙지 않고 화면만 본다)")
 
 
+def cmd_adddirs(args):
+    """이 멤버가 자기 작업 디렉터리 밖에서 읽어야 하는 곳을 나열한다.
+
+    Claude Code 는 시작한 디렉터리 밖을 읽으려 하면 사람에게 묻는다. 조직은
+    사람 없이 돌아가야 하므로 launch 가 --add-dir 로 미리 열어 준다.
+
+    소스가 workdir 밖에 있는 배치에서 필요하다 — 예를 들어 산출물만 모으는
+    디렉터리를 workdir 로 두고 areas 를 절대경로로 가리키는 경우, 팀장과
+    리뷰어는 코드를 한 줄도 못 읽는다. 겉으로는 대화상자가 떠서 멈춘 것으로만
+    보인다.
+    """
+    org = load_org()
+    wd = Path(org["org"]["workdir"])
+    me = None
+    for m in org["members"]:
+        if m["id"] == args.member:
+            me = m
+            break
+    if me is None:
+        return
+    mine = Path(me.get("workdir_resolved") or str(wd))
+    out = []
+    for a in (org.get("areas") or {}).values():
+        ap = Path(a["path"])
+        full = ap if ap.is_absolute() else (wd / a["path"])
+        try:
+            full = full.resolve()
+        except Exception:
+            continue
+        if not full.is_dir():
+            continue
+        try:
+            full.relative_to(mine.resolve())
+            continue          # 이미 자기 작업 디렉터리 안이다
+        except ValueError:
+            pass
+        if str(full) not in out:
+            out.append(str(full))
+    for d in out:
+        print(d)
+
+
 def cmd_expand(args):
     """선택자를 실제 멤버 id 목록으로 펼친다.
 
@@ -1421,6 +1463,10 @@ def build_parser():
     s.add_argument("--type", action="append")
     s.add_argument("--grep")
     s.set_defaults(fn=cmd_log)
+
+    s = sub.add_parser("adddirs")
+    s.add_argument("--member", required=True)
+    s.set_defaults(fn=cmd_adddirs)
 
     s = sub.add_parser("layout")
     s.add_argument("--rows")

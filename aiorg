@@ -289,6 +289,11 @@ cmd_launch() {
   # "작업 디렉터리 밖 읽기를 허용하시겠습니까?" 대화상자가 떠서 조직 전체가 멈춘다.
   # --add-dir 로 이 저장소를 읽을 수 있는 곳에 넣어 준다.
   local cmdline="${AIORG_CLAUDE_CMD:-claude --add-dir \"$AIORG_HOME\"}"
+  # 소스가 작업 디렉터리 밖에 있는 배치에서는 코드가 있는 곳도 열어 줘야 한다.
+  # 안 그러면 팀장·리뷰어가 코드를 한 줄도 못 읽고, 겉으로는 대화상자가 떠서
+  # 멈춘 것으로만 보인다. AIORG_CLAUDE_CMD 로 직접 지정했으면 손대지 않는다.
+  local add_areas=1
+  [[ -n ${AIORG_CLAUDE_CMD:-} ]] && add_areas=0
   local id sess pane state count=0 running=""
   [[ -f "$(aiorg_panes_file)" ]] || die "먼저 ./aiorg up 을 실행하세요."
   info "claude 기동 중 (명령: $cmdline)..."
@@ -306,7 +311,13 @@ cmd_launch() {
       running+=" $id"
       continue
     fi
-    tmux send-keys -t "$pane" -l "$cmdline"
+    local cmd="$cmdline" extra
+    if ((add_areas)); then
+      while read -r extra; do
+        [[ -n $extra ]] && cmd+=" --add-dir \"$extra\""
+      done < <(st adddirs --member "$id" 2>/dev/null)
+    fi
+    tmux send-keys -t "$pane" -l "$cmd"
     tmux send-keys -t "$pane" Enter
     # 자리별로 기록한다. brief 를 했는지 판정하는 기준선이다 — 같은 pane 에서
     # claude 를 다시 띄우면 대화 맥락이 사라지므로 그 전의 brief 는 무효다.
