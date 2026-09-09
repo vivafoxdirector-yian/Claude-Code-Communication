@@ -286,8 +286,13 @@ AIORG_HOME=/경로                      # 프레임워크 위치
 ./aiorg attach <멤버>                 # ↓ 로 'Yes, I trust this folder' 로 옮기고 Enter, Ctrl-b d
 cd <작업 디렉터리> && claude           # 미리 한 번 신뢰해 두면 다음부터 안 뜬다
 
-# brief 가 "0 명에게 전달"
-./aiorg status                       # 전원 '대기' 가 아니면 건너뛴다. 이유가 함께 나온다
+# brief 가 "0 명에게 전달" — 아무에게도 안 갔다는 뜻
+./aiorg status                       # '대기' 가 아닌 사람은 건너뛴다. 건너뜀 줄에 이유가 있다
+./aiorg attach dev-lead              # (prompt) 면 붙어서 답한다. Ctrl-b n 으로 같은 부서의 다음 창
+./aiorg brief                        # 전원 '대기' 가 된 뒤 다시
+
+# 신뢰 대화상자를 아예 안 겪기 (launch 가 띄우기 전에 알려준다)
+cd <작업 디렉터리> && claude           # 한 번만 답해 두면 이후 조용히 뜬다
 
 # 전원 '대기' 인데 미확인이 안 줄어듦
 ./aiorg notify

@@ -907,6 +907,38 @@ def cmd_permissions(args):
           + "건 / 거부 " + str(len(nodeny)) + "건 추가)")
 
 
+def cmd_untrusted(args):
+    """아직 신뢰 확인을 받지 않은 작업 디렉터리를 나열한다.
+
+    Claude Code 는 처음 보는 폴더에서 뜰 때 사람에게 신뢰를 묻는다. 조직은
+    사람 없이 돌아야 하는데 이것만은 예외라, 여덟 자리가 한꺼번에 대화상자
+    앞에 멈춘다. brief 는 '대기' 인 멤버에게만 가므로 그 상태에서는
+    "0 명에게 전달" 이 된다.
+
+    미리 알면 한 번만 답하고 끝낼 수 있다. 기록은 ~/.claude.json 의
+    projects.<경로>.hasTrustDialogAccepted 에 남는다.
+    """
+    org = load_org()
+    wd = org["org"]["workdir"]
+    want = {wd}
+    for m in org["members"]:
+        w = m.get("workdir_resolved")
+        if w:
+            want.add(w)
+    cfg = Path.home() / ".claude.json"
+    trusted = set()
+    if cfg.is_file():
+        try:
+            proj = json.loads(cfg.read_text(encoding="utf-8")).get("projects", {})
+            trusted = {k for k, v in proj.items()
+                       if isinstance(v, dict) and v.get("hasTrustDialogAccepted")}
+        except Exception:
+            return          # 읽지 못하면 아무 말도 하지 않는다. 없는 근거로 경고하지 않는다
+    for w in sorted(want):
+        if w not in trusted:
+            print(w)
+
+
 def cmd_expand(args):
     """선택자를 실제 멤버 id 목록으로 펼친다.
 
@@ -1546,6 +1578,9 @@ def build_parser():
     s.add_argument("workdir")
     s.add_argument("--check", action="store_true")
     s.set_defaults(fn=cmd_permissions)
+
+    s = sub.add_parser("untrusted")
+    s.set_defaults(fn=cmd_untrusted)
 
     s = sub.add_parser("layout")
     s.add_argument("--rows")
