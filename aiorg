@@ -1137,6 +1137,7 @@ aiorg — AI 조직 프레임워크
 
 조직 운영 (사람이 쓰는 명령)
   ./aiorg templates                    조직 템플릿 목록
+  ./aiorg chart <템플릿|조직도> [--mermaid]  조직도를 그림으로
   ./aiorg new <템플릿> [이름]           템플릿을 org/<이름>.yaml 로 복사
   ./aiorg up [--org 이름|경로] [--launch]  조직도대로 tmux 세션 구성
   ./aiorg launch                       각 pane 에서 claude 기동
@@ -1220,6 +1221,7 @@ main() {
     scaffold) cmd_scaffold "$@" ;;
     skills)   cmd_skills "$@" ;;
     templates) st templates "$@" ;;
+    chart)    st chart "$@" ;;
     new)      st new "$@" ;;
     whoami)   aiorg_whoami ;;
     doctor)   cmd_doctor "$@" ;;

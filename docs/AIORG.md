@@ -648,6 +648,33 @@ myproj-org: 4 windows      # 프로젝트 B
 조직을 바꿀 때마다 "이전 조직의 미완료 태스크" 경고가 뜬다.
 **동시에 돌릴 거면 저장소를 복사하는 편이 깔끔하다.**
 
+### 조직도를 그림으로 보기
+
+```bash
+./aiorg chart product-team            # 터미널에서
+./aiorg chart mycorp --mermaid        # 문서에 붙일 형태
+```
+
+```
+AI Dev Corp  (8명 / 5세션)
+
+👑 ceo       대표  [exec]
+   |- 🎯 dev-lead  개발팀장  [dev]
+   |  |- 🔧 dev-1     백엔드 개발자  [dev]
+   |  `- 🔧 dev-2     프론트엔드 개발자  [dev]
+   |- 📋 po        제품 책임자  [product]
+   |- 📣 presales  프리세일즈  [biz]
+   `- 🎯 qa-lead   품질팀장  [qa]
+      `- 🔍 qa-1      코드 리뷰어  [qa]
+```
+
+대괄호 안은 tmux 세션(부서)이다. `--mermaid` 는 부서별 `subgraph` 로 묶어
+내므로 조직 구조와 tmux 배치가 한 그림에 들어온다.
+
+조직을 띄우지 않아도 되고, 템플릿 이름도 조직도 이름도 받는다. 열 종의
+그림은 [org/templates/README.md](../org/templates/README.md) 에 미리 만들어 두었다 —
+**손으로 그린 것이 아니라 이 명령으로 만든 것**이므로 템플릿을 고치면 다시 만든다.
+
 ### 조직 템플릿
 
 `org/templates/` 에 서로 구조가 다른 10종이 있다. 자세한 안내는

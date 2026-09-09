@@ -28,6 +28,588 @@
 | `enterprise` | 14명 / 6세션 | 4계층. 개발 2팀, 기획팀장, 고객군별 프리세일즈 |
 | `existing-product` | 8명 / 3세션 | **이미 있는 제품에 붙이는 형태.** `workdir`·`areas` 로 프론트/백엔드 위치를 선언 |
 
+## 조직도
+
+아래 그림은 `./aiorg chart` 가 조직도 파일에서 만든 것이다.
+템플릿을 고치면 다시 만들어야 하므로, 의심스러우면 직접 돌려 본다.
+
+```bash
+./aiorg chart product-team            # 터미널에서 보기
+./aiorg chart product-team --mermaid  # 문서에 붙일 형태
+```
+
+### `enterprise`
+
+AI Org (enterprise)  (14명 / 6세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+  end
+  subgraph s_product["product"]
+    m_po_lead["po-lead<br/>기획팀장"]
+    m_po_account["po-account<br/>제품 책임자 (계정·권한)"]
+    m_po_billing["po-billing<br/>제품 책임자 (결제·알림)"]
+  end
+  subgraph s_backend["backend"]
+    m_be_lead["be-lead<br/>백엔드팀장"]
+    m_be_1["be-1<br/>백엔드 개발자 A"]
+    m_be_2["be-2<br/>백엔드 개발자 B"]
+  end
+  subgraph s_frontend["frontend"]
+    m_fe_lead["fe-lead<br/>프론트팀장"]
+    m_fe_1["fe-1<br/>프론트 개발자"]
+  end
+  subgraph s_qa["qa"]
+    m_qa_lead["qa-lead<br/>품질팀장"]
+    m_qa_1["qa-1<br/>코드 리뷰어 (정확성)"]
+    m_qa_2["qa-2<br/>코드 리뷰어 (보안)"]
+  end
+  subgraph s_biz["biz"]
+    m_presales_fin["presales-fin<br/>프리세일즈 (금융)"]
+    m_presales_pub["presales-pub<br/>프리세일즈 (공공)"]
+  end
+  m_ceo --> m_po_lead
+  m_po_lead --> m_po_account
+  m_po_lead --> m_po_billing
+  m_ceo --> m_be_lead
+  m_be_lead --> m_be_1
+  m_be_lead --> m_be_2
+  m_ceo --> m_fe_lead
+  m_fe_lead --> m_fe_1
+  m_ceo --> m_qa_lead
+  m_qa_lead --> m_qa_1
+  m_qa_lead --> m_qa_2
+  m_ceo --> m_presales_fin
+  m_ceo --> m_presales_pub
+```
+
+### `existing-product`
+
+AI Org (기존 제품)  (8명 / 3세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+    m_po["po<br/>제품 책임자"]
+  end
+  subgraph s_dev["dev"]
+    m_dev_lead["dev-lead<br/>개발팀장"]
+    m_dev_be["dev-be<br/>백엔드 개발자"]
+    m_dev_fe["dev-fe<br/>프론트엔드 개발자"]
+    m_dev_ops["dev-ops<br/>인프라 담당"]
+  end
+  subgraph s_qa["qa"]
+    m_qa_lead["qa-lead<br/>품질팀장"]
+    m_qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  m_ceo --> m_po
+  m_ceo --> m_dev_lead
+  m_dev_lead --> m_dev_be
+  m_dev_lead --> m_dev_fe
+  m_dev_lead --> m_dev_ops
+  m_ceo --> m_qa_lead
+  m_qa_lead --> m_qa_1
+```
+
+### `minimal`
+
+AI Org (minimal)  (4명 / 1세션)
+
+```mermaid
+graph TD
+  subgraph s_org["org"]
+    m_ceo["ceo<br/>대표"]
+    m_lead["lead<br/>팀장"]
+    m_w1["w1<br/>실무자 A"]
+    m_w2["w2<br/>실무자 B"]
+  end
+  m_ceo --> m_lead
+  m_lead --> m_w1
+  m_lead --> m_w2
+```
+
+### `product-team`
+
+AI Dev Corp  (8명 / 5세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+  end
+  subgraph s_dev["dev"]
+    m_dev_lead["dev-lead<br/>개발팀장"]
+    m_dev_1["dev-1<br/>백엔드 개발자"]
+    m_dev_2["dev-2<br/>프론트엔드 개발자"]
+  end
+  subgraph s_product["product"]
+    m_po["po<br/>제품 책임자"]
+  end
+  subgraph s_biz["biz"]
+    m_presales["presales<br/>프리세일즈"]
+  end
+  subgraph s_qa["qa"]
+    m_qa_lead["qa-lead<br/>품질팀장"]
+    m_qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  m_ceo --> m_dev_lead
+  m_dev_lead --> m_dev_1
+  m_dev_lead --> m_dev_2
+  m_ceo --> m_po
+  m_ceo --> m_presales
+  m_ceo --> m_qa_lead
+  m_qa_lead --> m_qa_1
+```
+
+### `quality-first`
+
+AI Org (quality-first)  (8명 / 3세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+    m_po["po<br/>제품 책임자"]
+  end
+  subgraph s_dev["dev"]
+    m_dev_lead["dev-lead<br/>개발팀장"]
+    m_dev_1["dev-1<br/>개발자 A"]
+    m_dev_2["dev-2<br/>개발자 B"]
+  end
+  subgraph s_qa["qa"]
+    m_qa_lead["qa-lead<br/>품질팀장"]
+    m_qa_1["qa-1<br/>코드 리뷰어 (정확성)"]
+    m_qa_2["qa-2<br/>코드 리뷰어 (보안)"]
+  end
+  m_ceo --> m_po
+  m_ceo --> m_dev_lead
+  m_dev_lead --> m_dev_1
+  m_dev_lead --> m_dev_2
+  m_ceo --> m_qa_lead
+  m_qa_lead --> m_qa_1
+  m_qa_lead --> m_qa_2
+```
+
+### `research`
+
+AI Org (research)  (5명 / 3세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+  end
+  subgraph s_product["product"]
+    m_po_lead["po-lead<br/>기획팀장"]
+    m_po_market["po-market<br/>제품 책임자 (시장)"]
+    m_po_product["po-product<br/>제품 책임자 (기능)"]
+  end
+  subgraph s_biz["biz"]
+    m_presales["presales<br/>프리세일즈"]
+  end
+  m_ceo --> m_po_lead
+  m_po_lead --> m_po_market
+  m_po_lead --> m_po_product
+  m_ceo --> m_presales
+```
+
+### `research-build`
+
+AI Org (research → build)  (10명 / 5세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+  end
+  subgraph s_product["product"]
+    m_po_lead["po-lead<br/>기획팀장"]
+    m_po_market["po-market<br/>제품 책임자 (시장)"]
+    m_po_product["po-product<br/>제품 책임자 (기능)"]
+  end
+  subgraph s_dev["dev"]
+    m_dev_lead["dev-lead<br/>개발팀장"]
+    m_dev_1["dev-1<br/>백엔드 개발자"]
+    m_dev_2["dev-2<br/>프론트엔드 개발자"]
+  end
+  subgraph s_qa["qa"]
+    m_qa_lead["qa-lead<br/>품질팀장"]
+    m_qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  subgraph s_biz["biz"]
+    m_presales["presales<br/>프리세일즈"]
+  end
+  m_ceo --> m_po_lead
+  m_po_lead --> m_po_market
+  m_po_lead --> m_po_product
+  m_ceo --> m_dev_lead
+  m_dev_lead --> m_dev_1
+  m_dev_lead --> m_dev_2
+  m_ceo --> m_qa_lead
+  m_qa_lead --> m_qa_1
+  m_ceo --> m_presales
+```
+
+### `solo`
+
+AI Org (solo)  (2명 / 1세션)
+
+```mermaid
+graph TD
+  subgraph s_org["org"]
+    m_ceo["ceo<br/>대표"]
+    m_dev["dev<br/>실무자"]
+  end
+  m_ceo --> m_dev
+```
+
+### `startup`
+
+AI Org (startup)  (5명 / 2세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+  end
+  subgraph s_team["team"]
+    m_po["po<br/>제품 책임자"]
+    m_dev_1["dev-1<br/>개발자 A"]
+    m_dev_2["dev-2<br/>개발자 B"]
+    m_presales["presales<br/>프리세일즈"]
+  end
+  m_ceo --> m_po
+  m_ceo --> m_dev_1
+  m_ceo --> m_dev_2
+  m_ceo --> m_presales
+```
+
+### `two-po`
+
+AI Dev Corp (기획 2인)  (8명 / 4세션)
+
+```mermaid
+graph TD
+  subgraph s_exec["exec"]
+    m_ceo["ceo<br/>대표"]
+  end
+  subgraph s_product["product"]
+    m_po_account["po-account<br/>제품 책임자 (계정·권한)"]
+    m_po_billing["po-billing<br/>제품 책임자 (결제·알림)"]
+  end
+  subgraph s_dev["dev"]
+    m_dev_lead["dev-lead<br/>개발팀장"]
+    m_dev_1["dev-1<br/>백엔드 개발자"]
+    m_dev_2["dev-2<br/>프론트엔드 개발자"]
+  end
+  subgraph s_qa["qa"]
+    m_qa_lead["qa-lead<br/>품질팀장"]
+    m_qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  m_ceo --> m_po_account
+  m_ceo --> m_po_billing
+  m_ceo --> m_dev_lead
+  m_dev_lead --> m_dev_1
+  m_dev_lead --> m_dev_2
+  m_ceo --> m_qa_lead
+  m_qa_lead --> m_qa_1
+```
+
+
+## 조직도
+
+아래 그림은 `./aiorg chart` 가 조직도 파일에서 만든 것이다.
+템플릿을 고치면 다시 만들어야 하므로, 의심스러우면 직접 돌려 본다.
+
+```bash
+./aiorg chart product-team            # 터미널에서 보기
+./aiorg chart product-team --mermaid  # 문서에 붙일 형태
+```
+
+### `enterprise`
+
+AI Org (enterprise)  (14명 / 6세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+  end
+  subgraph product["product"]
+    po_lead["po-lead<br/>기획팀장"]
+    po_account["po-account<br/>제품 책임자 (계정·권한)"]
+    po_billing["po-billing<br/>제품 책임자 (결제·알림)"]
+  end
+  subgraph backend["backend"]
+    be_lead["be-lead<br/>백엔드팀장"]
+    be_1["be-1<br/>백엔드 개발자 A"]
+    be_2["be-2<br/>백엔드 개발자 B"]
+  end
+  subgraph frontend["frontend"]
+    fe_lead["fe-lead<br/>프론트팀장"]
+    fe_1["fe-1<br/>프론트 개발자"]
+  end
+  subgraph qa["qa"]
+    qa_lead["qa-lead<br/>품질팀장"]
+    qa_1["qa-1<br/>코드 리뷰어 (정확성)"]
+    qa_2["qa-2<br/>코드 리뷰어 (보안)"]
+  end
+  subgraph biz["biz"]
+    presales_fin["presales-fin<br/>프리세일즈 (금융)"]
+    presales_pub["presales-pub<br/>프리세일즈 (공공)"]
+  end
+  ceo --> po_lead
+  po_lead --> po_account
+  po_lead --> po_billing
+  ceo --> be_lead
+  be_lead --> be_1
+  be_lead --> be_2
+  ceo --> fe_lead
+  fe_lead --> fe_1
+  ceo --> qa_lead
+  qa_lead --> qa_1
+  qa_lead --> qa_2
+  ceo --> presales_fin
+  ceo --> presales_pub
+```
+
+### `existing-product`
+
+AI Org (기존 제품)  (8명 / 3세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+    po["po<br/>제품 책임자"]
+  end
+  subgraph dev["dev"]
+    dev_lead["dev-lead<br/>개발팀장"]
+    dev_be["dev-be<br/>백엔드 개발자"]
+    dev_fe["dev-fe<br/>프론트엔드 개발자"]
+    dev_ops["dev-ops<br/>인프라 담당"]
+  end
+  subgraph qa["qa"]
+    qa_lead["qa-lead<br/>품질팀장"]
+    qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  ceo --> po
+  ceo --> dev_lead
+  dev_lead --> dev_be
+  dev_lead --> dev_fe
+  dev_lead --> dev_ops
+  ceo --> qa_lead
+  qa_lead --> qa_1
+```
+
+### `minimal`
+
+AI Org (minimal)  (4명 / 1세션)
+
+```mermaid
+graph TD
+  subgraph org["org"]
+    ceo["ceo<br/>대표"]
+    lead["lead<br/>팀장"]
+    w1["w1<br/>실무자 A"]
+    w2["w2<br/>실무자 B"]
+  end
+  ceo --> lead
+  lead --> w1
+  lead --> w2
+```
+
+### `product-team`
+
+AI Dev Corp  (8명 / 5세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+  end
+  subgraph dev["dev"]
+    dev_lead["dev-lead<br/>개발팀장"]
+    dev_1["dev-1<br/>백엔드 개발자"]
+    dev_2["dev-2<br/>프론트엔드 개발자"]
+  end
+  subgraph product["product"]
+    po["po<br/>제품 책임자"]
+  end
+  subgraph biz["biz"]
+    presales["presales<br/>프리세일즈"]
+  end
+  subgraph qa["qa"]
+    qa_lead["qa-lead<br/>품질팀장"]
+    qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  ceo --> dev_lead
+  dev_lead --> dev_1
+  dev_lead --> dev_2
+  ceo --> po
+  ceo --> presales
+  ceo --> qa_lead
+  qa_lead --> qa_1
+```
+
+### `quality-first`
+
+AI Org (quality-first)  (8명 / 3세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+    po["po<br/>제품 책임자"]
+  end
+  subgraph dev["dev"]
+    dev_lead["dev-lead<br/>개발팀장"]
+    dev_1["dev-1<br/>개발자 A"]
+    dev_2["dev-2<br/>개발자 B"]
+  end
+  subgraph qa["qa"]
+    qa_lead["qa-lead<br/>품질팀장"]
+    qa_1["qa-1<br/>코드 리뷰어 (정확성)"]
+    qa_2["qa-2<br/>코드 리뷰어 (보안)"]
+  end
+  ceo --> po
+  ceo --> dev_lead
+  dev_lead --> dev_1
+  dev_lead --> dev_2
+  ceo --> qa_lead
+  qa_lead --> qa_1
+  qa_lead --> qa_2
+```
+
+### `research`
+
+AI Org (research)  (5명 / 3세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+  end
+  subgraph product["product"]
+    po_lead["po-lead<br/>기획팀장"]
+    po_market["po-market<br/>제품 책임자 (시장)"]
+    po_product["po-product<br/>제품 책임자 (기능)"]
+  end
+  subgraph biz["biz"]
+    presales["presales<br/>프리세일즈"]
+  end
+  ceo --> po_lead
+  po_lead --> po_market
+  po_lead --> po_product
+  ceo --> presales
+```
+
+### `research-build`
+
+AI Org (research → build)  (10명 / 5세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+  end
+  subgraph product["product"]
+    po_lead["po-lead<br/>기획팀장"]
+    po_market["po-market<br/>제품 책임자 (시장)"]
+    po_product["po-product<br/>제품 책임자 (기능)"]
+  end
+  subgraph dev["dev"]
+    dev_lead["dev-lead<br/>개발팀장"]
+    dev_1["dev-1<br/>백엔드 개발자"]
+    dev_2["dev-2<br/>프론트엔드 개발자"]
+  end
+  subgraph qa["qa"]
+    qa_lead["qa-lead<br/>품질팀장"]
+    qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  subgraph biz["biz"]
+    presales["presales<br/>프리세일즈"]
+  end
+  ceo --> po_lead
+  po_lead --> po_market
+  po_lead --> po_product
+  ceo --> dev_lead
+  dev_lead --> dev_1
+  dev_lead --> dev_2
+  ceo --> qa_lead
+  qa_lead --> qa_1
+  ceo --> presales
+```
+
+### `solo`
+
+AI Org (solo)  (2명 / 1세션)
+
+```mermaid
+graph TD
+  subgraph org["org"]
+    ceo["ceo<br/>대표"]
+    dev["dev<br/>실무자"]
+  end
+  ceo --> dev
+```
+
+### `startup`
+
+AI Org (startup)  (5명 / 2세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+  end
+  subgraph team["team"]
+    po["po<br/>제품 책임자"]
+    dev_1["dev-1<br/>개발자 A"]
+    dev_2["dev-2<br/>개발자 B"]
+    presales["presales<br/>프리세일즈"]
+  end
+  ceo --> po
+  ceo --> dev_1
+  ceo --> dev_2
+  ceo --> presales
+```
+
+### `two-po`
+
+AI Dev Corp (기획 2인)  (8명 / 4세션)
+
+```mermaid
+graph TD
+  subgraph exec["exec"]
+    ceo["ceo<br/>대표"]
+  end
+  subgraph product["product"]
+    po_account["po-account<br/>제품 책임자 (계정·권한)"]
+    po_billing["po-billing<br/>제품 책임자 (결제·알림)"]
+  end
+  subgraph dev["dev"]
+    dev_lead["dev-lead<br/>개발팀장"]
+    dev_1["dev-1<br/>백엔드 개발자"]
+    dev_2["dev-2<br/>프론트엔드 개발자"]
+  end
+  subgraph qa["qa"]
+    qa_lead["qa-lead<br/>품질팀장"]
+    qa_1["qa-1<br/>코드 리뷰어"]
+  end
+  ceo --> po_account
+  ceo --> po_billing
+  ceo --> dev_lead
+  dev_lead --> dev_1
+  dev_lead --> dev_2
+  ceo --> qa_lead
+  qa_lead --> qa_1
+```
+
+
 ## 고르는 법
 
 - **처음이라면** `solo` 나 `minimal` 로 한 번 굴려보고 감을 잡는다.

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import random
 import string
 import sys
@@ -939,6 +940,100 @@ def cmd_untrusted(args):
             print(w)
 
 
+def load_org_file(name: str):
+    """조직도 파일 하나를 부작용 없이 읽는다.
+
+    resolve 는 runtime/ 에 결과를 쓰고 검증까지 하지만, 그림만 그릴 때는
+    그럴 이유가 없다. 템플릿을 띄우지 않고 훑어보려는 것이므로 workdir 이
+    없어도 동작해야 한다.
+    """
+    import yaml
+
+    src = templates_dir() / (name + ".yaml")
+    if not src.exists():
+        src = resolve_org_path(name)
+    raw = yaml.safe_load(src.read_text(encoding="utf-8")) or {}
+    roles = raw.get("roles") or {}
+    members = []
+    for m in raw.get("members") or []:
+        role = m.get("role", "")
+        rc = roles.get(role) or {}
+        members.append({
+            "id": m.get("id", ""),
+            "title": m.get("title", ""),
+            "role": role,
+            "reports_to": m.get("reports_to") or "",
+            "session": m.get("session") or "org",
+            "icon": m.get("icon") or rc.get("icon") or DEFAULT_ICONS.get(role, "*"),
+        })
+    return src, raw.get("org") or {}, members
+
+
+def cmd_chart(args):
+    """조직도를 그림으로. ASCII 가 기본이고 --mermaid 는 문서에 붙일 용도다.
+
+    손으로 그린 그림은 조직도를 고칠 때마다 어긋난다. 그려 두지 않고 그린다.
+    """
+    src, meta, members = load_org_file(args.name)
+    by_id = {m["id"]: m for m in members}
+    kids = {}
+    roots = []
+    for m in members:
+        parent = m["reports_to"]
+        if parent and parent in by_id:
+            kids.setdefault(parent, []).append(m["id"])
+        else:
+            roots.append(m["id"])
+
+    if args.mermaid:
+        # 세션명과 멤버 id 가 같으면 subgraph 와 노드가 충돌해 그림이 깨진다.
+        # 지금 템플릿에는 없지만 조직도는 사람이 쓰는 것이므로 접두사로 막는다.
+        def nid(x):
+            return "m_" + re.sub(r"[^0-9A-Za-z_]", "_", x)
+
+        def sid(x):
+            return "s_" + re.sub(r"[^0-9A-Za-z_]", "_", x)
+
+        print("```mermaid")
+        print("graph TD")
+        # 부서(세션)별로 묶어 보여주면 tmux 배치와 대응이 눈에 들어온다
+        depts = {}
+        for m in members:
+            depts.setdefault(m["session"], []).append(m)
+        for dept, ms in depts.items():
+            print('  subgraph ' + sid(dept) + '["' + dept + '"]')
+            for m in ms:
+                label = m["id"] + "<br/>" + m["title"]
+                print('    ' + nid(m["id"]) + '["' + label + '"]')
+            print("  end")
+        for m in members:
+            if m["reports_to"] and m["reports_to"] in by_id:
+                print("  " + nid(m["reports_to"]) + " --> " + nid(m["id"]))
+        print("```")
+        return
+
+    name = meta.get("name") or args.name
+    print(name + "  (" + str(len(members)) + "명 / "
+          + str(len({m["session"] for m in members})) + "세션)")
+    print()
+    width = max((dwidth(m["id"]) for m in members), default=8)
+
+    def walk(mid, prefix, conn):
+        m = by_id[mid]
+        print(prefix + conn + icon_of(m) + " " + pad(m["id"], width)
+              + "  " + m["title"] + "  [" + m["session"] + "]")
+        ch = kids.get(mid, [])
+        for i, c in enumerate(ch):
+            last = i == len(ch) - 1
+            walk(c, prefix + ("   " if conn in ("`- ", "") else "|  "),
+                 "`- " if last else "|- ")
+
+    for r in roots:
+        walk(r, "", "")
+    print()
+    print("파일: " + str(src))
+
+
 def cmd_expand(args):
     """선택자를 실제 멤버 id 목록으로 펼친다.
 
@@ -1578,6 +1673,11 @@ def build_parser():
     s.add_argument("workdir")
     s.add_argument("--check", action="store_true")
     s.set_defaults(fn=cmd_permissions)
+
+    s = sub.add_parser("chart")
+    s.add_argument("name")
+    s.add_argument("--mermaid", action="store_true")
+    s.set_defaults(fn=cmd_chart)
 
     s = sub.add_parser("untrusted")
     s.set_defaults(fn=cmd_untrusted)

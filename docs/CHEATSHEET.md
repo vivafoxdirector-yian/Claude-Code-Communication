@@ -165,6 +165,8 @@ tmux kill-server
 ./aiorg templates                    # 목록 (existing-product 는 경로를 고쳐야 뜬다)
 ./aiorg new product-team mycorp      # org/mycorp.yaml
 ./aiorg new existing-product mycorp  # 기존 제품용 (areas + 워킹트리)
+./aiorg chart product-team           # 조직도를 그림으로 (터미널)
+./aiorg chart mycorp --mermaid       # 문서에 붙일 형태
 ```
 
 ---

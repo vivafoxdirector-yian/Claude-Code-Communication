@@ -40,6 +40,7 @@
 ```bash
 ./aiorg doctor                  # 실행 환경 점검 (tmux, python3, PyYAML, claude)
 ./aiorg templates               # 조직 템플릿 목록 (10종)
+./aiorg chart <이름> [--mermaid] # 조직도를 그림으로 (띄우지 않아도 된다)
 ./aiorg new <템플릿> [이름]      # 템플릿을 org/<이름>.yaml 로 복사
 ./aiorg up [--org 이름]         # 조직도대로 tmux 세션 구성
 ./aiorg launch                  # 각 자리에서 claude 기동
