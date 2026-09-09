@@ -65,7 +65,7 @@
 ./aiorg task tree                    # 태스크 갈래
 ./aiorg progress                     # 진행 중인 일과 각자의 최신 작업 기록
 ./aiorg progress --assignee dev-1    # 한 사람만
-./aiorg layout                       # 누가 어느 세션·창·자리에 있나 + 지킴이 상태
+./aiorg layout                       # 누가 어느 세션·창·pane 에 있나 + 지킴이 상태
 ./aiorg peek dev-1                   # 그 자리 화면 (기본 30줄). 입력은 안 들어간다
 ./aiorg peek dev-1 -n 60             # 줄 수 지정
 ./aiorg log                          # 이벤트 로그
