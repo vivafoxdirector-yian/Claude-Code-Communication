@@ -772,7 +772,7 @@ def cmd_layout(args):
         "idle": "대기", "busy": "작업중", "starting": "부팅중",
         "prompt": "응답대기", "login": "로그인필요", "down": "미가동",
     }
-    head = ["세션", "창", "자리(pane)", "멤버", "직함", "상태"]
+    head = ["세션", "창", "pane", "멤버", "직함", "상태"]
     table = [head]
     for mid, sess, widx, wname, pane, state in rows:
         table.append([sess, widx, pane, mid, titles.get(mid, wname), badges.get(state, state)])
@@ -782,10 +782,6 @@ def cmd_layout(args):
         if i == 0:
             print("  " + "  ".join("-" * widths[j] for j in range(6)))
 
-    print("")
-    print("  자리(pane) 는 tmux pane ID 다. 창·pane 번호와 달리 그 pane 이")
-    print("  살아 있는 동안 바뀌지 않아, 메시지 전달과 상태 판정의 기준이 된다.")
-    print("  '-' 면 그 pane 이 이미 없다는 뜻이다.")
     print("")
     if args.notify:
         print("  알림 지킴이 : " + args.notify)

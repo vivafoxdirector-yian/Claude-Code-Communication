@@ -359,7 +359,10 @@ cmd_launch() {
   fi
 
   info "claude 기동 중 (명령: $cmdline)..."
-  while IFS=$'\t' read -r id sess pane; do
+  aiorg_load_panes || die "먼저 ./aiorg up 을 실행하세요."
+  local _line
+  for _line in "${AIORG_PANES[@]}"; do
+    IFS=$'\t' read -r id sess pane <<<"$_line"
     [[ -n $id ]] || continue
     if ! aiorg_pane_alive "$pane"; then
       info "  $id — pane 없음, 건너뜀"
@@ -386,7 +389,7 @@ cmd_launch() {
     st event --type member.launch --kv "member=$id" --kv "pane=$pane" >/dev/null
     info "  $id 기동"
     count=$((count + 1))
-  done <"$(aiorg_panes_file)"
+  done
   st event --type org.launch --kv "members=$count" >/dev/null
   info ""
   if [[ -n $running ]]; then
@@ -411,7 +414,10 @@ cmd_brief() {
   # 나머지에게 다시 지시서를 들이밀지 않기 위해서다.
   local only=" $* "
   [[ -n $* ]] && info "대상: $*"
-  while IFS=$'\t' read -r id sess pane; do
+  aiorg_load_panes || die "먼저 ./aiorg up 을 실행하세요."
+  local _line
+  for _line in "${AIORG_PANES[@]}"; do
+    IFS=$'\t' read -r id sess pane <<<"$_line"
     [[ -n $id ]] || continue
     if [[ $only != "  " && $only != *" $id "* ]]; then
       continue
@@ -453,7 +459,7 @@ cmd_brief() {
     st event --type member.brief --kv "member=$id" --kv "pane=$pane" >/dev/null
     info "  $id 지시서 안내 전달"
     sent=$((sent + 1))
-  done <"$(aiorg_panes_file)"
+  done
   info ""
   info "$sent 명에게 전달."
   if [[ -n $skipped ]]; then
@@ -990,7 +996,10 @@ cmd_layout() {
   local rows id sess pane state widx wname
   rows="$AIORG_HOME/runtime/layout.tsv"
   : >"$rows"
-  while IFS=$'\t' read -r id sess pane; do
+  aiorg_load_panes || die "먼저 ./aiorg up 을 실행하세요."
+  local _line
+  for _line in "${AIORG_PANES[@]}"; do
+    IFS=$'\t' read -r id sess pane <<<"$_line"
     [[ -n $id ]] || continue
     if ! aiorg_pane_alive "$pane"; then
       printf '%s\t%s\t-\t-\t-\tdown\n' "$id" "$sess" >>"$rows"
@@ -1001,7 +1010,7 @@ cmd_layout() {
     read -r widx wname < <(tmux display-message -p -t "$pane" '#{window_index} #{window_name}' 2>/dev/null)
     state="$(aiorg_member_state "$pane")"
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$sess" "${widx:--}" "${wname:--}" "$pane" "$state" >>"$rows"
-  done <"$(aiorg_panes_file)"
+  done
 
   local nstate
   if aiorg_notify_running; then

@@ -1155,17 +1155,17 @@ aiorg progress --assignee dev-1
 ```
 
 ```
-  세션           창  자리(pane)  멤버      직함               상태
-  -------------  --  ----------  --------  -----------------  ------
-  aiorg-exec     0   %0          ceo       대표               대기
-  aiorg-dev      0   %1          dev-lead  개발팀장           작업중
+  세션           창  pane  멤버      직함               상태
+  -------------  --  ----  --------  -----------------  ------
+  aiorg-exec     0   %0    ceo       대표               대기
+  aiorg-dev      0   %1    dev-lead  개발팀장           작업중
   ...
 
   알림 지킴이 : aiorg-notify — 가동중
   배치        : windows
 ```
 
-**자리(pane) 는 tmux pane ID 다.** 창 번호나 pane 번호는 창을 닫으면 당겨지고
+**`pane` 열은 tmux pane ID 다.** 창 번호나 pane 번호는 창을 닫으면 당겨지고
 `base-index` 설정에도 좌우되지만, pane ID 는 그 pane 이 죽을 때까지 바뀌지 않는다.
 그래서 프레임워크가 멤버↔pane 을 이 값으로 기록하고(`runtime/panes.tsv`),
 메시지 전달과 상태 판정을 전부 여기에 건다. `-` 면 그 pane 이 이미 없다는 뜻이다.

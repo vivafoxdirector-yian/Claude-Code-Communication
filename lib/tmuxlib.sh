@@ -37,6 +37,22 @@ PY
 # ---------------------------------------------------------------- pane 대장
 
 aiorg_panes_file() { printf '%s/runtime/panes.tsv' "$AIORG_HOME"; }
+# panes.tsv 를 배열로 읽는다. AIORG_PANES 에 담긴다.
+#
+# 왜 파일을 열어 둔 채 돌지 않는가: `while read ... < panes.tsv` 로 돌면서
+# 루프 안에서 tmux 를 부르면, 자식이 물려받은 fd 0 을 건드려 읽기 위치가
+# 되돌아가는 일이 있다. 마지막 몇 줄이 다시 읽혀 같은 멤버가 두 번 처리된다.
+# 열 번에 한 번꼴로 나서 알아채기 어렵고, launch 라면 같은 자리에 명령줄을
+# 두 번 타이핑하게 된다. 파일을 먼저 다 읽어 두면 이 문제가 사라진다.
+aiorg_load_panes() {
+  AIORG_PANES=()
+  local f
+  f="$(aiorg_panes_file)"
+  [[ -f $f ]] || return 1
+  mapfile -t AIORG_PANES <"$f"
+  return 0
+}
+
 
 # id -> pane ID. 없으면 빈 문자열.
 aiorg_pane_of() {
@@ -153,14 +169,17 @@ aiorg_write_live() {
   local out="$AIORG_HOME/runtime/live.json" tmp id sess pane state first=1
   tmp="$out.tmp"
   printf '{\n' >"$tmp"
-  while IFS=$'\t' read -r id sess pane; do
+  aiorg_load_panes || return 1
+  local _line
+  for _line in "${AIORG_PANES[@]}"; do
+    IFS=$'\t' read -r id sess pane <<<"$_line"
     [[ -n $id ]] || continue
     state="$(aiorg_member_state "$pane")"
     [[ $first -eq 1 ]] || printf ',\n' >>"$tmp"
     first=0
     printf '  "%s": {"session": "%s", "pane": "%s", "state": "%s"}' \
       "$id" "$sess" "$pane" "$state" >>"$tmp"
-  done <"$(aiorg_panes_file)"
+  done
   printf '\n}\n' >>"$tmp"
   mv -f "$tmp" "$out"
   printf '%s\n' "$out"
