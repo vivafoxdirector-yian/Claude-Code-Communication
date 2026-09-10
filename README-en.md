@@ -1,5 +1,7 @@
 # 🏢 aiorg — AI Organization Framework
 
+*[한국어](README.md)*
+
 Declare an org chart in YAML; aiorg stands up one independent Claude Code session
 (tmux) per member and routes instructions, reports and tasks between them through
 a file-backed queue.

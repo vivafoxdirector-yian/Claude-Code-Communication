@@ -1,5 +1,7 @@
 # 🏢 aiorg — AI 조직 프레임워크
 
+*[English](README-en.md)*
+
 조직도를 YAML 로 선언하면, 각 구성원을 독립 Claude Code 세션(tmux)으로 세우고
 그들 사이의 지시·보고·태스크를 파일 큐로 관리한다.
 
