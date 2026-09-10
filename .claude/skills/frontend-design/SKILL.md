@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults.
+description: Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults. Also drives a project workflow for building UI from a named design style — web/product (Bento Grid, Liquid Glass / Glassmorphism, Material 3 Expressive, Minimal / Swiss, Aurora / Mesh Gradient, Big Expressive Typography, Dark-first Developer UI) and desktop system programs (Fluent / Windows 11, Desktop Density / Pro Tool); Neubrutalism and Flat 2.0 kept as reference) — producing a scope-locked style spec with design tokens, generating style-compliant component code (HTML/CSS/Tailwind/React), and auditing UX affordance & WCAG contrast in a review loop. Use for UI/component design, design tokens/design systems, landing pages, or UX/accessibility review.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -53,3 +53,22 @@ Use active voice as default. A control should say exactly what happens when it's
 Treat failure and emptiness as moments for direction, not mood. Explain what went wrong and how to fix it, in the interface's voice rather than a person's. Errors don't apologize, and they are never vague about what happened. An empty screen is an invitation to act.
 
 Keep the register conversational and tuned: plain verbs, sentence case, no filler, with tone matched to the brand and the audience. Let each element do exactly one job. A label labels, an example demonstrates, and nothing quietly does double duty.
+
+---
+
+## Project Workflow (named-style UI pipeline)
+
+> 이 섹션은 원문(Anthropic)에 프로젝트가 추가한 부분이다. 위 원칙(독창성·절제·AI 클리셰 회피)을 **상위 가이드**로 유지한 채, 아래 3단계로 실제 UI를 산출한다. 상세 지침은 각 참조 파일에 있다.
+
+명명된 디자인 스타일로 UI를 만들 때 다음 순서로 진행한다. 스타일 카탈로그(활성 7종 + 참고)는 [references/design-style-spec.md](references/design-style-spec.md)의 Style Catalog 참조:
+
+1. **사양 (Spec)** — [references/design-style-spec.md](references/design-style-spec.md)
+   스타일을 택해 **Scope Lock(목표/제외/인수조건)** + 디자인 토큰(색/**타이포**/그림자/반경) + 레이아웃 + **시그니처 요소**까지 사양서를 작성한다. 코드 작성 전에 반드시 이 단계를 먼저.
+   - 색상 토큰 심화 — [references/color-token-system.md](references/color-token-system.md): 브랜드색 기반 시맨틱 스케일(Primary/Neutral/Status 50~900), 60-30-10 배분, 다크모드 서피스 계층을 설계할 때 사용.
+2. **구현 (Codegen)** — [references/ui-component-codegen.md](references/ui-component-codegen.md)
+   사양서에 맞춰 프로덕션 UI 코드를 생성한다. 스타일별 Tailwind/CSS 가이드와 상태(hover/focus-visible/active/disabled) 완전 구현을 따른다.
+3. **검증 (Audit)** — 두 감사를 함께 돌린다. 지적은 [Blocker]/[Follow-up]/[Non-actionable]로 분류, **Blocker 0건이면 통과**, 2회차부터 diff만 검토.
+   - 일반 사용성 — [references/ux-affordance-audit.md](references/ux-affordance-audit.md): affordance·시인성·포커스·반응형 (HIG/Material/NN·g).
+   - 색상 접근성 — [references/color-contrast-audit.md](references/color-contrast-audit.md): WCAG 2.1/2.2 AA 대비(본문 4.5:1 / 대형·UI 3.0:1), 색각 이상 대응. **대비 임계값의 단일 출처.**
+
+주의: 위 원문 원칙과 이 파이프라인이 충돌하면(예: 명명된 스타일이 "AI 클리셰 3종"으로 수렴) **원문 원칙이 우선**한다 — 스타일은 골라도 그 안에서 독창성과 절제를 지킨다.
